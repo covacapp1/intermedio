@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Intermedio Demo</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <section id="lobbyView" class="view active" aria-labelledby="lobbyTitle">
+      <header class="view-header">
+        <h1 id="lobbyTitle">Intermedio</h1>
+        <p>Demo frontend: 1 jugador + 2 IA</p>
+      </header>
+
+      <div class="panel">
+        <label for="buyInInput">Monto fijo por mesa</label>
+        <input id="buyInInput" type="number" min="100" step="100" value="1000" />
+      </div>
+
+      <div class="actions-grid">
+        <button id="playNowBtn" class="btn btn-primary">Jugar Ahora</button>
+        <button id="createTableBtn" class="btn">Crear Mesa Privada</button>
+      </div>
+
+      <div class="panel">
+        <label for="joinCodeInput">Unirse con Código</label>
+        <div class="join-row">
+          <input id="joinCodeInput" type="text" maxlength="6" placeholder="ABC123" />
+          <button id="joinTableBtn" class="btn">Unirse</button>
+        </div>
+      </div>
+
+      <p id="lobbyMessage" class="hint"></p>
+    </section>
+
+    <section id="gameView" class="view" aria-labelledby="tableTitle">
+      <header class="view-header">
+        <h2 id="tableTitle">Mesa en juego</h2>
+        <div class="meta-row">
+          <span>Código: <strong id="tableCodeText">------</strong></span>
+          <span>Monto inicial: <strong id="buyInText">$0</strong></span>
+          <span>Pozo: <strong id="potText">$0</strong></span>
+        </div>
+      </header>
+
+      <section class="table-area">
+        <div id="playersBoard" class="players-board"></div>
+      </section>
+
+      <section class="control-panel">
+        <label for="betInput">Tu apuesta</label>
+        <input id="betInput" type="number" min="50" step="50" value="200" />
+        <div class="control-actions">
+          <button id="playRoundBtn" class="btn btn-primary">Jugar mano</button>
+          <button id="passBtn" class="btn">Pasar</button>
+        </div>
+        <button id="nextRoundBtn" class="btn" disabled>Siguiente ronda</button>
+      </section>
+
+      <p id="roundMessage" class="hint"></p>
+    </section>
+  </main>
+
+  <div id="potModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="potModalTitle">
+    <div class="modal-card">
+      <h3 id="potModalTitle">El pozo llegó a $0</h3>
+      <p>¿Desean continuar agregando el monto inicial por jugador?</p>
+      <div class="actions-grid">
+        <button id="continueBtn" class="btn btn-primary">Continuar jugando</button>
+        <button id="closeTableBtn" class="btn btn-danger">Cerrar mesa</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
