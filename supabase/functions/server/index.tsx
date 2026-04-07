@@ -2,6 +2,7 @@ import { Hono } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import * as kv from "./kv_store.tsx";
+import { registerRealtimeRoomRoutes } from "./realtime_rooms.tsx";
 
 interface Card {
   suit: string;
@@ -319,6 +320,8 @@ app.use(
     maxAge: 600,
   }),
 );
+
+registerRealtimeRoomRoutes(app);
 
 app.get("/make-server-b530d664/health", (c) => c.json({ status: "ok" }));
 

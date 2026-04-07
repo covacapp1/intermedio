@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Login } from "./components/Login";
+import { Login, type RegisterFormData } from "./components/Login";
 import { WesternHome } from "./components/WesternHome";
 import { Cashier } from "./components/Cashier";
 import { Ads } from "./components/Ads";
@@ -13,8 +13,10 @@ import { RebuyModal } from "./components/RebuyModal";
 import { AdminWithdrawals } from "./components/AdminWithdrawals";
 import { type GameState } from "./types/game";
 import { formatMoney } from "./utils/deck";
-import { api, type TableInfo } from "./services/api";
+import { api } from "./services/api";
+import { realtimeGame, type GameTable as RealtimeGameTable, type TableInfo } from "./services/realtimeGame";
 import { appConfig } from "./config";
+import { supabase } from "../lib/supabase";
 import {
   STARTING_BALANCE,
   type AdminWithdrawalItem,
@@ -39,8 +41,6 @@ interface UserData {
   };
 }
 
-const SESSION_KEY = "intermedio_session";
-
 const emptyUserData: UserData = {
   id: "",
   email: "",
@@ -58,35 +58,15 @@ const emptyUserData: UserData = {
 const isBrowser = typeof window !== "undefined";
 const TURN_DURATION_MS = 15000;
 
-const slugifyEmail = (email: string): string =>
-  email.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || "jugador";
-
-const getStoredSession = (): UserData | null => {
-  if (!isBrowser) return null;
-
-  const raw = window.localStorage.getItem(SESSION_KEY);
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw) as UserData;
-  } catch (error) {
-    console.error("Error reading session:", error);
-    return null;
-  }
-};
-
-const storedSession = getStoredSession();
-
 function App() {
-  const [currentView, setCurrentView] = useState<AppView>(storedSession ? "home" : "login");
-  const [userData, setUserData] = useState<UserData>(storedSession ?? emptyUserData);
-  const [walletSummary, setWalletSummary] = useState<WalletSummary>(
-    storedSession
-      ? createEmptyWalletSummary(storedSession.id, storedSession.email)
-      : createEmptyWalletSummary("", "")
-  );
+  const [currentView, setCurrentView] = useState<AppView>("login");
+  const [userData, setUserData] = useState<UserData>(emptyUserData);
+  const [walletSummary, setWalletSummary] = useState<WalletSummary>(createEmptyWalletSummary("", ""));
   const [cashierNotice, setCashierNotice] = useState("");
   const [adminWithdrawals, setAdminWithdrawals] = useState<AdminWithdrawalItem[]>([]);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [authError, setAuthError] = useState("");
 
   const [tables, setTables] = useState<TableInfo[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -113,6 +93,8 @@ function App() {
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const autoAdvanceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const autoAdvancedRoundRef = useRef<number | null>(null);
+  const lobbyUnsubscribeRef = useRef<(() => void) | null>(null);
+  const gameUnsubscribeRef = useRef<(() => void) | null>(null);
   const isAdmin = userData.email === appConfig.adminEmail;
   const isYourTurn = gameState.players[gameState.currentTurn]?.id === userData.id;
 
@@ -127,6 +109,81 @@ function App() {
         email: previous.profile.email || summary.email,
       },
     }));
+  };
+
+  const syncUserFromAuth = async (
+    authUser: {
+      id: string;
+      email?: string;
+      user_metadata?: Record<string, unknown>;
+    } | null
+  ) => {
+    if (!authUser?.id || !authUser.email) {
+      setUserData(emptyUserData);
+      setWalletSummary(createEmptyWalletSummary("", ""));
+      setCurrentView("login");
+      return;
+    }
+
+    const email = authUser.email.trim().toLowerCase();
+    const metadataUsername =
+      typeof authUser.user_metadata?.username === "string" && authUser.user_metadata.username.trim()
+        ? authUser.user_metadata.username.trim()
+        : email.split("@")[0] || "Jugador";
+    const metadataFirstName =
+      typeof authUser.user_metadata?.first_name === "string" ? authUser.user_metadata.first_name.trim() : "";
+    const metadataLastName =
+      typeof authUser.user_metadata?.last_name === "string" ? authUser.user_metadata.last_name.trim() : "";
+    const metadataDni =
+      typeof authUser.user_metadata?.dni === "string" ? authUser.user_metadata.dni.trim() : "";
+    const metadataFullName =
+      typeof authUser.user_metadata?.full_name === "string"
+        ? authUser.user_metadata.full_name
+        : [metadataFirstName, metadataLastName].filter(Boolean).join(" ");
+    const avatarUrl =
+      typeof authUser.user_metadata?.avatar_url === "string" ? authUser.user_metadata.avatar_url : "";
+
+    const { error } = await supabase.from("profiles").upsert({
+      id: authUser.id,
+      username: metadataUsername,
+      avatar_url: avatarUrl || null,
+      first_name: metadataFirstName || null,
+      last_name: metadataLastName || null,
+      dni: metadataDni || null,
+      email,
+    });
+
+    if (error) {
+      console.error("Error syncing profile:", error);
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username, avatar_url, first_name, last_name, dni, email")
+      .eq("id", authUser.id)
+      .maybeSingle();
+
+    const username = profile?.username || metadataUsername;
+    const fullName =
+      [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || metadataFullName;
+    const dni = profile?.dni || metadataDni;
+    const profileEmail = profile?.email || email;
+    const profilePhotoUrl = profile?.avatar_url || avatarUrl;
+
+    setUserData((previous) => ({
+      ...previous,
+      id: authUser.id,
+      email: profileEmail,
+      profile: {
+        ...previous.profile,
+        username,
+        fullName,
+        dni,
+        email: profileEmail,
+        photoUrl: profilePhotoUrl,
+      },
+    }));
+    setCurrentView((previous) => (previous === "login" ? "home" : previous));
   };
 
   const refreshWallet = async (nextUserId?: string, nextEmail?: string) => {
@@ -173,14 +230,35 @@ function App() {
   };
 
   useEffect(() => {
-    if (!isBrowser) return;
+    let isMounted = true;
 
-    if (userData.id) {
-      window.localStorage.setItem(SESSION_KEY, JSON.stringify(userData));
-    } else {
-      window.localStorage.removeItem(SESSION_KEY);
-    }
-  }, [userData]);
+    const bootstrapAuth = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!isMounted) return;
+
+      await syncUserFromAuth(session?.user ?? null);
+      if (isMounted) {
+        setAuthLoading(false);
+      }
+    };
+
+    bootstrapAuth();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      void syncUserFromAuth(session?.user ?? null);
+      setAuthLoading(false);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (!userData.id || !userData.email) return;
@@ -214,9 +292,20 @@ function App() {
 
   useEffect(() => {
     if (currentView === "tables") {
-      fetchTables();
-      const interval = setInterval(fetchTables, 3000);
-      return () => clearInterval(interval);
+      lobbyUnsubscribeRef.current?.();
+      lobbyUnsubscribeRef.current = realtimeGame.subscribeToLobby(
+        (nextTables) => {
+          setTables(nextTables);
+        },
+        (message) => {
+          console.error("Lobby realtime error:", message);
+        }
+      );
+
+      return () => {
+        lobbyUnsubscribeRef.current?.();
+        lobbyUnsubscribeRef.current = null;
+      };
     }
   }, [currentView]);
 
@@ -228,14 +317,28 @@ function App() {
 
   useEffect(() => {
     if (currentView === "game" && currentTableId) {
-      fetchGameState();
-      pollingIntervalRef.current = setInterval(fetchGameState, 2000);
+      gameUnsubscribeRef.current?.();
+      gameUnsubscribeRef.current = realtimeGame.subscribeToGame(
+        currentTableId,
+        (table) => {
+          applyRealtimeTable(table);
+        },
+        (message) => {
+          console.error("Game realtime error:", message);
+          if (message === "Room not found") {
+            alert("La mesa fue cerrada.");
+            void handleCloseTable();
+          }
+        }
+      );
 
       heartbeatIntervalRef.current = setInterval(() => {
-        api.heartbeat(currentTableId, userData.id);
-      }, 5000);
+        void realtimeGame.heartbeat(currentTableId, userData.id);
+      }, 4000);
 
       return () => {
+        gameUnsubscribeRef.current?.();
+        gameUnsubscribeRef.current = null;
         if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
         if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
         if (autoAdvanceTimeoutRef.current) clearTimeout(autoAdvanceTimeoutRef.current);
@@ -307,96 +410,176 @@ function App() {
     showRebuyModal,
   ]);
 
-  const fetchTables = async () => {
-    const response = await api.getTables();
-    if (response.data) {
-      setTables(response.data.tables);
+  const applyRealtimeTable = (serverTable: RealtimeGameTable) => {
+    if (!serverTable) return;
+
+    const localGameState: GameState = {
+      tableCode: serverTable.code,
+      initialBuyIn: serverTable.buyIn,
+      maxPlayers: serverTable.maxPlayers,
+      pot: serverTable.pot,
+      deck: serverTable.deck,
+      round: serverTable.round,
+      roundResolved: serverTable.roundResolved,
+      currentTurn: serverTable.currentTurn,
+      turnStartedAt: serverTable.turnStartedAt,
+      players: serverTable.players.map((player) => ({
+        id: player.id,
+        name: player.name,
+        isAI: player.isAI,
+        balance: player.balance,
+        bet: player.bet,
+        cards: player.cards,
+        thirdCard: player.thirdCard,
+        result: player.result,
+        photoUrl: player.photoUrl,
+        connected: player.connected,
+        lastSeen: player.lastSeen,
+      })),
+    };
+
+    setGameState(localGameState);
+
+    if (serverTable.status === "waiting") {
+      setGameMessage(`Esperando jugadores... ${serverTable.currentPlayers}/${serverTable.maxPlayers}`);
+      return;
+    }
+
+    if (serverTable.roundResolved && !gameState.roundResolved) {
+      if (serverTable.pot <= 0) {
+        setGameMessage("El pozo llego a $0.");
+        setShowPotModal(true);
+      } else {
+        setGameMessage(`Ronda ${serverTable.round} finalizada. Pozo actual: ${formatMoney(serverTable.pot)}.`);
+      }
+    } else if (!serverTable.roundResolved && serverTable.status === "playing") {
+      const activePlayer = serverTable.players[serverTable.currentTurn];
+      setGameMessage(
+        activePlayer?.id === userData.id
+          ? "Es tu turno. Decide tu apuesta antes de que termine el reloj."
+          : `Turno de ${activePlayer?.name ?? "otro jugador"}.`
+      );
     }
   };
 
-  const fetchGameState = async () => {
-    if (!currentTableId) return;
-
-    const response = await api.getTable(currentTableId);
-    if (response.data) {
-      const serverTable = response.data.table;
-
-      const localGameState: GameState = {
-        tableCode: serverTable.code,
-        initialBuyIn: serverTable.buyIn,
-        maxPlayers: serverTable.maxPlayers,
-        pot: serverTable.pot,
-        deck: serverTable.deck,
-        round: serverTable.round,
-        roundResolved: serverTable.roundResolved,
-        currentTurn: serverTable.currentTurn,
-        turnStartedAt: serverTable.turnStartedAt,
-        players: serverTable.players.map((player) => ({
-          id: player.id,
-          name: player.name,
-          isAI: player.isAI,
-          balance: player.balance,
-          bet: player.bet,
-          cards: player.cards,
-          thirdCard: player.thirdCard,
-          result: player.result,
-          photoUrl: player.photoUrl,
-          connected: player.connected,
-          lastSeen: player.lastSeen,
-        })),
-      };
-
-      setGameState(localGameState);
-
-      if (serverTable.roundResolved && !gameState.roundResolved) {
-        if (serverTable.pot <= 0) {
-          setGameMessage("El pozo llego a $0.");
-          setShowPotModal(true);
-        } else {
-          setGameMessage(`Ronda ${serverTable.round} finalizada. Pozo actual: ${formatMoney(serverTable.pot)}.`);
-        }
-      } else if (!serverTable.roundResolved && serverTable.status === "playing") {
-        const activePlayer = serverTable.players[serverTable.currentTurn];
-        setGameMessage(
-          activePlayer?.id === userData.id
-            ? "Es tu turno. Decide tu apuesta antes de que termine el reloj."
-            : `Turno de ${activePlayer?.name ?? "otro jugador"}.`
-        );
-      }
-    } else if (response.error) {
-      console.error("Error fetching game state:", response.error);
-      if (response.error === "Table not found") {
-        alert("La mesa fue cerrada.");
-        handleCloseTable();
-      }
-    }
-  };
-
-  const handleLogin = (email: string) => {
+  const handleLogin = async (email: string, password: string) => {
     const normalizedEmail = email.trim().toLowerCase();
-    const userId = `user_${slugifyEmail(normalizedEmail)}`;
+    setAuthSubmitting(true);
+    setAuthError("");
 
-    setUserData({
-      id: userId,
+    const signInResult = await supabase.auth.signInWithPassword({
       email: normalizedEmail,
-      balance: STARTING_BALANCE,
-      hasAdFree: false,
-      profile: {
-        username: normalizedEmail.split("@")[0] || "Jugador",
-        fullName: "",
-        dni: "",
-        email: normalizedEmail,
-        photoUrl: "",
+      password,
+    });
+
+    if (!signInResult.error) {
+      setAuthSubmitting(false);
+      return;
+    }
+    setAuthSubmitting(false);
+    const lowerMessage = signInResult.error.message.toLowerCase();
+    if (lowerMessage.includes("invalid login credentials")) {
+      setAuthError("Email o contrasena incorrectos. Si no tienes cuenta, usa Registrarse.");
+      return;
+    }
+
+    setAuthError(signInResult.error.message || "No pudimos iniciar sesion.");
+  };
+
+  const handleRegister = async (formData: RegisterFormData) => {
+    const normalizedEmail = formData.email.trim().toLowerCase();
+    const normalizedUsername = formData.username.trim();
+    const firstName = formData.firstName.trim();
+    const lastName = formData.lastName.trim();
+    const dni = formData.dni.trim();
+    const password = formData.password;
+
+    if (!firstName || !lastName || !dni || !normalizedUsername || !normalizedEmail || !password) {
+      setAuthError("Completa todos los campos para registrarte.");
+      return;
+    }
+
+    setAuthSubmitting(true);
+    setAuthError("");
+
+    const signUpResult = await supabase.auth.signUp({
+      email: normalizedEmail,
+      password,
+      options: {
+        data: {
+          username: normalizedUsername,
+          first_name: firstName,
+          last_name: lastName,
+          full_name: `${firstName} ${lastName}`.trim(),
+          dni,
+        },
       },
     });
+
+    setAuthSubmitting(false);
+
+    if (signUpResult.error) {
+      const lowerMessage = signUpResult.error.message.toLowerCase();
+      if (lowerMessage.includes("password")) {
+        setAuthError("La contrasena no es valida. Usa al menos 6 caracteres.");
+        return;
+      }
+
+      if (lowerMessage.includes("email")) {
+        setAuthError(`No pudimos registrar ese email: ${signUpResult.error.message}`);
+        return;
+      }
+
+      setAuthError(signUpResult.error.message || "No pudimos crear la cuenta.");
+      return;
+    }
+
+    if (!signUpResult.data.session) {
+      setAuthError("Cuenta creada. Revisa tu email para confirmarla antes de ingresar.");
+      return;
+    }
+
+    const authUserId = signUpResult.data.session.user.id;
+    const { error: profileError } = await supabase.from("profiles").upsert({
+      id: authUserId,
+      username: normalizedUsername,
+      first_name: firstName,
+      last_name: lastName,
+      dni,
+      email: normalizedEmail,
+    });
+
+    if (profileError) {
+      const lowerProfileMessage = profileError.message.toLowerCase();
+      if (lowerProfileMessage.includes("username")) {
+        setAuthError("Ese nombre de usuario ya esta en uso.");
+        return;
+      }
+
+      if (lowerProfileMessage.includes("dni")) {
+        setAuthError("Ese DNI ya esta registrado.");
+        return;
+      }
+
+      if (lowerProfileMessage.includes("email")) {
+        setAuthError("Ese email ya esta asociado a otra cuenta.");
+        return;
+      }
+
+      setAuthError(profileError.message || "La cuenta se creo, pero no pudimos guardar el perfil.");
+      return;
+    }
+
     setCurrentView("home");
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setCurrentView("login");
     setWalletSummary(createEmptyWalletSummary("", ""));
     setCashierNotice("");
     setUserData(emptyUserData);
+    setAuthError("");
   };
 
   const handleNavigate = (view: "profile" | "tables" | "createTable" | "cashier" | "ads" | "admin") => {
@@ -508,7 +691,26 @@ function App() {
     alert(response.error ?? "No pudimos actualizar el retiro.");
   };
 
-  const handleSaveProfile = (profileData: UserData["profile"]) => {
+  const handleSaveProfile = async (profileData: UserData["profile"]) => {
+    if (userData.id) {
+      const [firstName = "", ...restName] = (profileData.fullName || "").trim().split(/\s+/);
+      const lastName = restName.join(" ");
+      const { error } = await supabase.from("profiles").upsert({
+        id: userData.id,
+        username: profileData.username || userData.email.split("@")[0] || "Jugador",
+        avatar_url: profileData.photoUrl || null,
+        first_name: firstName || null,
+        last_name: lastName || null,
+        dni: profileData.dni || null,
+        email: profileData.email || userData.email,
+      });
+
+      if (error) {
+        alert("No pudimos guardar el perfil en Supabase.");
+        return;
+      }
+    }
+
     setUserData((previous) => ({
       ...previous,
       email: profileData.email || previous.email,
@@ -524,14 +726,7 @@ function App() {
       return;
     }
 
-    const response = await api.createTable(
-      tableName,
-      buyIn,
-      maxPlayers,
-      userData.id,
-      userData.profile.username || userData.email,
-      userData.profile.photoUrl
-    );
+    const response = await realtimeGame.createTable(tableName, buyIn, maxPlayers, userData.id);
 
     if (response.data) {
       await recordWalletDebit(buyIn, "game_buy_in", `Buy-in de mesa: ${tableName}`);
@@ -553,12 +748,7 @@ function App() {
       return;
     }
 
-    const response = await api.joinTable(
-      tableId,
-      userData.id,
-      userData.profile.username || userData.email,
-      userData.profile.photoUrl
-    );
+    const response = await realtimeGame.joinTable(tableId, userData.id);
 
     if (response.data) {
       await recordWalletDebit(table.buyIn, "game_buy_in", `Buy-in en mesa: ${table.name}`);
@@ -597,7 +787,7 @@ function App() {
       return;
     }
 
-    const response = await api.makeBet(currentTableId, userData.id, bet);
+    const response = await realtimeGame.makeBet(currentTableId, userData.id, bet);
 
     if (response.data) {
       setGameMessage("Apuesta enviada...");
@@ -621,7 +811,7 @@ function App() {
       return;
     }
 
-    const response = await api.nextRound(currentTableId);
+    const response = await realtimeGame.nextRound(currentTableId);
 
     if (response.data) {
       setGameMessage(`Iniciando ronda ${response.data.table.round}...`);
@@ -641,7 +831,7 @@ function App() {
     }
 
     await recordWalletDebit(recharge, "rebuy", "Recarga de pozo");
-    const response = await api.nextRound(currentTableId);
+    const response = await realtimeGame.nextRound(currentTableId);
 
     if (response.data) {
       setShowPotModal(false);
@@ -653,7 +843,7 @@ function App() {
 
   const handleCloseTable = async () => {
     if (currentTableId) {
-      await api.leaveTable(currentTableId, userData.id);
+      await realtimeGame.leaveTable(currentTableId, userData.id);
     }
 
     setShowPotModal(false);
@@ -693,8 +883,23 @@ function App() {
     return you ? Math.max(0, Math.floor(you.balance)) : 0;
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#1b120a] text-[#F5DEB3]">
+        Cargando sesion...
+      </div>
+    );
+  }
+
   if (currentView === "login") {
-    return <Login onLogin={handleLogin} />;
+    return (
+      <Login
+        onLogin={handleLogin}
+        onRegister={handleRegister}
+        isLoading={authSubmitting}
+        errorMessage={authError}
+      />
+    );
   }
 
   if (currentView === "home") {
