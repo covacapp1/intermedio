@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { AdminWithdrawalItem } from "../types/wallet";
+import { formatArs, formatInt } from "../utils/economy";
 
 interface AdminWithdrawalsProps {
   withdrawals: AdminWithdrawalItem[];
@@ -7,12 +8,6 @@ interface AdminWithdrawalsProps {
   onRefresh: () => Promise<void>;
   onResolve: (withdrawalId: string, status: "approved" | "rejected", rejectionReason?: string) => Promise<void>;
 }
-
-const currency = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 2,
-});
 
 const formatDate = (timestamp: number) =>
   new Intl.DateTimeFormat("es-AR", {
@@ -68,7 +63,7 @@ export function AdminWithdrawals({
             Panel de retiros
           </h1>
           <p className="mt-2 text-sm text-[#D2B48C]">
-            Aprobar confirma la salida manual. Rechazar devuelve el saldo reservado al usuario.
+            Aprobar confirma la salida manual en ARS. Rechazar devuelve el saldo reservado en INT al usuario.
           </p>
 
           <div className="mt-6 grid gap-4">
@@ -84,14 +79,15 @@ export function AdminWithdrawals({
                 >
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div className="space-y-1 text-sm">
-                      <p className="text-lg font-bold">{currency.format(withdrawal.amount)}</p>
+                      <p className="text-lg font-bold">{formatInt(withdrawal.amount)}</p>
+                      <p>Equivale a pagar {formatArs(withdrawal.amount)}</p>
                       <p>{withdrawal.fullName} | {withdrawal.email}</p>
                       <p>DNI: {withdrawal.dni}</p>
                       <p>Usuario: {withdrawal.userId}</p>
                       <p>Metodo: {withdrawal.method === "bank_transfer" ? "Transferencia" : "Mercado Pago"}</p>
                       <p>Destino: {withdrawal.accountDestination}</p>
                       <p>Titular: {withdrawal.accountHolder}</p>
-                      <p>Saldo wallet actual: {currency.format(withdrawal.walletBalance)}</p>
+                      <p>Saldo wallet actual: {formatInt(withdrawal.walletBalance)}</p>
                       <p>Solicitado: {formatDate(withdrawal.requestedAt)}</p>
                       <p className="uppercase tracking-[0.2em] text-[#D4AF37]">{withdrawal.status}</p>
                       {withdrawal.rejectionReason ? <p>Motivo rechazo: {withdrawal.rejectionReason}</p> : null}

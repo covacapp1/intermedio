@@ -151,7 +151,7 @@ const randomTableCode = (): string => {
   return code;
 };
 
-const STARTING_BALANCE = 50000;
+const STARTING_BALANCE = 0;
 const TURN_DURATION_MS = 15000;
 
 const createEmptyWallet = (userId: string, email: string): WalletSummary => ({
@@ -175,11 +175,6 @@ const sortWithdrawals = (withdrawals: WithdrawalRequest[]) =>
 const getWallet = async (userId: string, email: string): Promise<WalletSummary> => {
   const wallet = await kv.get(walletKey(userId)) as WalletSummary | null;
   if (wallet) {
-    if (wallet.balance < STARTING_BALANCE) {
-      wallet.balance = STARTING_BALANCE;
-      wallet.updatedAt = Date.now();
-      await kv.set(walletKey(userId), wallet);
-    }
     if (!wallet.email && email) {
       wallet.email = email;
       wallet.updatedAt = Date.now();
@@ -523,11 +518,11 @@ app.post("/server/tables/:tableId/bet", async (c) => {
         const prize = Math.min(table.pot, betAmount);
         player.balance += prize;
         table.pot -= prize;
-        player.result = `Gana $${prize}`;
+        player.result = `Gana ${Math.round(prize)} INT`;
       } else {
         player.balance -= betAmount;
         table.pot += betAmount;
-        player.result = `Pierde $${betAmount}`;
+        player.result = `Pierde ${Math.round(betAmount)} INT`;
       }
     } else {
       player.result = "Pasa";

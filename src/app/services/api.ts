@@ -105,12 +105,6 @@ const walletStorage = {
     const wallet = wallets[userId];
 
     if (wallet) {
-      if (wallet.balance < STARTING_BALANCE) {
-        wallet.balance = STARTING_BALANCE;
-        wallet.updatedAt = Date.now();
-        wallets[userId] = wallet;
-        walletStorage.write(wallets);
-      }
       return wallet;
     }
 

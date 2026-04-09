@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import { IntIcon } from "./IntIcon";
+import { formatInt } from "../utils/economy";
 
 interface WesternHomeProps {
   userName: string;
@@ -37,7 +39,10 @@ export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogo
         <div className="absolute top-16 sm:top-20 right-4 z-40 bg-[#8B4513] border-4 border-[#654321] rounded-lg shadow-[0_10px_30px_rgba(0,0,0,0.7)] w-56 sm:w-64 overflow-hidden">
           <div className="bg-[#654321] px-4 py-2 border-b-2 border-[#D4AF37]">
             <p className="text-[#F5DEB3] font-semibold text-sm sm:text-base truncate">{userName}</p>
-            <p className="text-[#D2B48C] text-xs sm:text-sm">Saldo: ${userBalance.toFixed(2)}</p>
+            <p className="flex items-center gap-2 text-[#D2B48C] text-xs sm:text-sm">
+              <IntIcon className="h-4 w-4 text-[10px] text-[#3E2723]" />
+              <span>Saldo: {formatInt(userBalance)}</span>
+            </p>
           </div>
           <MenuEntry label="Cajero" onClick={() => onNavigate("cashier")} />
           <MenuEntry label="Anuncios" onClick={() => onNavigate("ads")} />

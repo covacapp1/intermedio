@@ -361,11 +361,11 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
           const prize = Math.min(nextPot, betAmount);
           nextBalance += prize;
           nextPot -= prize;
-          result = `Gana $${prize}`;
+          result = `Gana ${Math.round(prize)} INT`;
         } else {
           nextBalance -= betAmount;
           nextPot += betAmount;
-          result = `Pierde $${betAmount}`;
+          result = `Pierde ${Math.round(betAmount)} INT`;
         }
       }
 

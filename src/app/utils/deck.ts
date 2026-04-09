@@ -34,5 +34,5 @@ export function evaluateHand(cardA: Card, cardB: Card, cardC: Card): boolean {
 }
 
 export function formatMoney(value: number): string {
-  return `$${Math.round(value)}`;
+  return `${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(Math.round(value))} INT`;
 }

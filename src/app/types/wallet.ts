@@ -1,4 +1,4 @@
-export const STARTING_BALANCE = 50000;
+export const STARTING_BALANCE = 0;
 
 export type WalletTransactionKind =
   | "deposit"

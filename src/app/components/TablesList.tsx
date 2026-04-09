@@ -1,6 +1,7 @@
 import { Clock, DollarSign, Search, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { MultiplayerHelp } from "./MultiplayerHelp";
+import { formatInt } from "../utils/economy";
 
 export interface TableInfo {
   id: string;
@@ -157,7 +158,7 @@ function TableCard({ table, onJoin }: { table: TableInfo; onJoin: () => void }) 
               <DollarSign className="h-4 w-4 text-[#D4AF37]" />
               <div>
                 <p className="text-xs text-[#D2B48C]">Buy-in</p>
-                <p className="text-sm font-bold text-[#F5DEB3]">${table.buyIn}</p>
+                <p className="text-sm font-bold text-[#F5DEB3]">{formatInt(table.buyIn)}</p>
               </div>
             </div>
 

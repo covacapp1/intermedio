@@ -280,8 +280,8 @@ function App() {
     if (!paymentStatus) return;
 
     const noticeByStatus: Record<string, string> = {
-      success: "Volviste desde Mercado Pago. Vamos a refrescar tu saldo para confirmar la acreditacion.",
-      pending: "El pago quedo pendiente. Apenas Mercado Pago lo confirme por webhook, se acredita el saldo.",
+      success: "Volviste desde Mercado Pago. Vamos a refrescar tu saldo INT para confirmar la acreditacion.",
+      pending: "El pago quedo pendiente. Apenas Mercado Pago lo confirme por webhook, se acreditan tus INT.",
       error: "El pago no pudo completarse. Podes intentarlo nuevamente desde el cajero.",
     };
 
@@ -624,7 +624,7 @@ function App() {
     });
 
     if (response.data) {
-      setCashierNotice("Te estamos redirigiendo a Mercado Pago para completar la carga.");
+      setCashierNotice("Te estamos redirigiendo a Mercado Pago para comprar INT.");
       if (isBrowser) {
         window.location.href = response.data.checkoutUrl;
       }
@@ -660,7 +660,7 @@ function App() {
 
     if (response.data) {
       applyWalletSummary(response.data);
-      setCashierNotice("La solicitud de retiro quedo registrada y el saldo fue reservado.");
+      setCashierNotice("La solicitud de retiro quedo registrada y los INT quedaron reservados.");
       return;
     }
 
@@ -785,7 +785,7 @@ function App() {
     }
 
     if (bet < 50 && bet !== 0) {
-      setGameMessage("La apuesta minima es $50, o usa Pasar.");
+      setGameMessage("La apuesta minima es 50 INT, o usa Pasar.");
       return;
     }
 

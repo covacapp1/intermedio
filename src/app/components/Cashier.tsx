@@ -4,6 +4,8 @@ import {
   type WalletTransaction,
   type WithdrawalMethod,
 } from "../types/wallet";
+import { IntIcon } from "./IntIcon";
+import { formatArs, formatInt, INT_CURRENCY, INT_TO_ARS_RATE } from "../utils/economy";
 
 interface CashierProps {
   userBalance: number;
@@ -27,12 +29,6 @@ interface CashierProps {
   }) => Promise<void>;
   onRefresh: () => Promise<void>;
 }
-
-const currency = new Intl.NumberFormat("es-AR", {
-  style: "currency",
-  currency: "ARS",
-  maximumFractionDigits: 2,
-});
 
 const formatDate = (timestamp: number) =>
   new Intl.DateTimeFormat("es-AR", {
@@ -157,11 +153,14 @@ export function Cashier({
 
             <div className="mt-6 rounded-xl border-2 border-[#D4AF37] bg-black/20 p-5">
               <p className="text-[#D2B48C] text-sm">Saldo disponible</p>
-              <p className="text-5xl font-bold text-[#D4AF37]" style={{ fontFamily: "serif" }}>
-                {currency.format(userBalance)}
-              </p>
+              <div className="mt-1 flex items-center gap-3">
+                <IntIcon className="h-10 w-10 text-xl text-[#3E2723]" />
+                <p className="text-5xl font-bold text-[#D4AF37]" style={{ fontFamily: "serif" }}>
+                  {formatInt(userBalance)}
+                </p>
+              </div>
               <p className="mt-2 text-sm text-[#F5DEB3]/85">
-                Las cargas se acreditan al confirmar webhook. Los retiros se guardan como solicitud manual.
+                1 ARS = {INT_TO_ARS_RATE} {INT_CURRENCY}. Las cargas acreditan INT al confirmar webhook y los retiros descuentan INT para pagar el mismo monto en pesos.
               </p>
             </div>
 
@@ -174,12 +173,12 @@ export function Cashier({
             <div className="mt-6 grid gap-4 xl:grid-cols-2">
               <div className="rounded-xl border-2 border-[#654321] bg-[#3E2723]/35 p-4">
                 <p className="text-xl font-bold text-[#F5DEB3]" style={{ fontFamily: "serif" }}>
-                  Cargar dinero
+                  Comprar INT
                 </p>
                 <p className="mt-1 text-sm text-[#D2B48C]">
-                  Checkout Pro con preferencia creada en backend.
+                  Depositas pesos por Mercado Pago y recibes la misma cantidad en INT.
                 </p>
-                <label className="mt-4 block text-sm font-semibold text-[#F5DEB3]">Monto</label>
+                <label className="mt-4 block text-sm font-semibold text-[#F5DEB3]">Monto en ARS</label>
                 <input
                   type="number"
                   min="1"
@@ -194,16 +193,19 @@ export function Cashier({
                   className="mt-4 w-full rounded border-2 border-[#654321] bg-gradient-to-b from-[#228B22] to-[#006400] px-4 py-3 font-bold text-white transition-all hover:from-[#32CD32] hover:to-[#228B22] disabled:opacity-70"
                   style={{ fontFamily: "serif" }}
                 >
-                  {isDepositing ? "Abriendo checkout..." : "Ir a Mercado Pago"}
+                  {isDepositing ? "Abriendo checkout..." : "Comprar INT con Mercado Pago"}
                 </button>
+                <p className="mt-3 text-xs text-[#D2B48C]">
+                  Recibiras {formatInt(Number(depositAmount) || 0)} por {formatArs(Number(depositAmount) || 0)}.
+                </p>
               </div>
 
               <div className="rounded-xl border-2 border-[#654321] bg-[#3E2723]/35 p-4">
                 <p className="text-xl font-bold text-[#F5DEB3]" style={{ fontFamily: "serif" }}>
-                  Solicitar retiro
+                  Retirar INT
                 </p>
                 <p className="mt-1 text-sm text-[#D2B48C]">
-                  Monto minimo sugerido: ARS 1.000. Aprobacion manual por panel o email.
+                  Monto minimo sugerido: 1.000 INT. Se descuentan INT y se paga el mismo monto en ARS tras aprobacion manual.
                 </p>
 
                 <div className="mt-4 grid gap-3">
@@ -214,7 +216,7 @@ export function Cashier({
                     value={withdrawAmount}
                     onChange={(event) => setWithdrawAmount(event.target.value)}
                     className="w-full rounded border-2 border-[#654321] bg-[#D2B48C] px-4 py-3 text-[#3E2723] focus:outline-none focus:border-[#D4AF37]"
-                    placeholder="Monto"
+                    placeholder="Monto en INT"
                   />
                   <select
                     value={withdrawMethod}
@@ -249,6 +251,9 @@ export function Cashier({
 
                 <div className="mt-3 text-xs text-[#D2B48C]">
                   Se toman del perfil: nombre, DNI y email. Si falta alguno, completalo en Perfil antes de retirar.
+                </div>
+                <div className="mt-2 text-xs text-[#D2B48C]">
+                  Retiras {formatInt(Number(withdrawAmount) || 0)} y recibes {formatArs(Number(withdrawAmount) || 0)}.
                 </div>
 
                 <button
@@ -307,7 +312,7 @@ export function Cashier({
                           }
                         >
                           {transaction.direction === "credit" ? "+" : "-"}
-                          {currency.format(transaction.amount)}
+                          {formatInt(transaction.amount)}
                         </p>
                       </div>
                       <p className="mt-1 text-sm text-[#D2B48C]">{transaction.description}</p>
@@ -335,7 +340,7 @@ export function Cashier({
                   recentWithdrawals.map((withdrawal) => (
                     <div key={withdrawal.id} className="rounded-lg border border-[#D4AF37]/40 bg-black/20 p-3">
                       <div className="flex items-center justify-between gap-3">
-                        <p className="font-semibold text-[#F5DEB3]">{currency.format(withdrawal.amount)}</p>
+                        <p className="font-semibold text-[#F5DEB3]">{formatInt(withdrawal.amount)}</p>
                         <p className="text-xs uppercase tracking-[0.2em] text-[#D4AF37]">{withdrawal.status}</p>
                       </div>
                       <p className="mt-1 text-sm text-[#D2B48C]">
