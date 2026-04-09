@@ -492,7 +492,11 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
 
       try {
         const refreshed = await loadRoomRows(roomId);
-        if (refreshed.players.length === 0) {
+        const shouldDeleteRoom =
+          refreshed.players.length === 0 ||
+          (refreshed.room.status !== "waiting" && refreshed.players.length < 2);
+
+        if (shouldDeleteRoom) {
           await db.from("rooms").delete().eq("id", roomId);
         }
       } catch {
