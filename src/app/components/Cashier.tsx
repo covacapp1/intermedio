@@ -193,7 +193,7 @@ export function Cashier({
                   className="mt-4 w-full rounded border-2 border-[#654321] bg-gradient-to-b from-[#228B22] to-[#006400] px-4 py-3 font-bold text-white transition-all hover:from-[#32CD32] hover:to-[#228B22] disabled:opacity-70"
                   style={{ fontFamily: "serif" }}
                 >
-                  {isDepositing ? "Abriendo checkout..." : "Comprar INT con Mercado Pago"}
+                  {isDepositing ? "Abriendo checkout..." : "Comprar INT"}
                 </button>
                 <p className="mt-3 text-xs text-[#D2B48C]">
                   Recibiras {formatInt(Number(depositAmount) || 0)} por {formatArs(Number(depositAmount) || 0)}.
@@ -269,7 +269,7 @@ export function Cashier({
                   className="mt-4 w-full rounded border-2 border-[#654321] bg-gradient-to-b from-[#DC143C] to-[#8B0000] px-4 py-3 font-bold text-white transition-all hover:from-[#FF4D6D] hover:to-[#DC143C] disabled:opacity-70"
                   style={{ fontFamily: "serif" }}
                 >
-                  {isWithdrawing ? "Registrando retiro..." : "Solicitar retiro"}
+                    {isWithdrawing ? "Registrando retiro..." : "Retirar PESOS"}
                 </button>
               </div>
             </div>
