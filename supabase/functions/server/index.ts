@@ -1,8 +1,8 @@
 import { Hono } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
-import * as kv from "./kv_store.tsx";
-import { registerRealtimeRoomRoutes } from "./realtime_rooms.tsx";
+import * as kv from "./kv_store.ts";
+import { registerRealtimeRoomRoutes } from "./realtime_rooms.ts";
 
 interface Card {
   suit: string;
@@ -314,7 +314,7 @@ app.use(
   "/*",
   cors({
     origin: "*",
-    allowHeaders: ["Content-Type", "Authorization"],
+    allowHeaders: ["Content-Type", "Authorization", "apikey"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     exposeHeaders: ["Content-Length"],
     maxAge: 600,
@@ -323,9 +323,9 @@ app.use(
 
 registerRealtimeRoomRoutes(app);
 
-app.get("/make-server-b530d664/health", (c) => c.json({ status: "ok" }));
+app.get("/server/health", (c) => c.json({ status: "ok" }));
 
-app.get("/make-server-b530d664/tables", async (c) => {
+app.get("/server/tables", async (c) => {
   try {
     const tables = await kv.getByPrefix("table:");
     const activeTables = tables
@@ -347,7 +347,7 @@ app.get("/make-server-b530d664/tables", async (c) => {
   }
 });
 
-app.post("/make-server-b530d664/tables", async (c) => {
+app.post("/server/tables", async (c) => {
   try {
     const body = await c.req.json();
     const { tableName, buyIn, maxPlayers, userId, userName, userPhoto } = body;
@@ -398,7 +398,7 @@ app.post("/make-server-b530d664/tables", async (c) => {
   }
 });
 
-app.post("/make-server-b530d664/tables/:tableId/join", async (c) => {
+app.post("/server/tables/:tableId/join", async (c) => {
   try {
     const tableId = `table:${c.req.param("tableId")}`;
     const body = await c.req.json();
@@ -465,7 +465,7 @@ app.post("/make-server-b530d664/tables/:tableId/join", async (c) => {
   }
 });
 
-app.get("/make-server-b530d664/tables/:tableId", async (c) => {
+app.get("/server/tables/:tableId", async (c) => {
   try {
     const tableId = `table:${c.req.param("tableId")}`;
     const table = await kv.get(tableId) as GameTable | null;
@@ -484,7 +484,7 @@ app.get("/make-server-b530d664/tables/:tableId", async (c) => {
   }
 });
 
-app.post("/make-server-b530d664/tables/:tableId/bet", async (c) => {
+app.post("/server/tables/:tableId/bet", async (c) => {
   try {
     const tableId = `table:${c.req.param("tableId")}`;
     const body = await c.req.json();
@@ -550,7 +550,7 @@ app.post("/make-server-b530d664/tables/:tableId/bet", async (c) => {
   }
 });
 
-app.post("/make-server-b530d664/tables/:tableId/next-round", async (c) => {
+app.post("/server/tables/:tableId/next-round", async (c) => {
   try {
     const tableId = `table:${c.req.param("tableId")}`;
     const table = await kv.get(tableId) as GameTable | null;
@@ -599,7 +599,7 @@ app.post("/make-server-b530d664/tables/:tableId/next-round", async (c) => {
   }
 });
 
-app.post("/make-server-b530d664/tables/:tableId/leave", async (c) => {
+app.post("/server/tables/:tableId/leave", async (c) => {
   try {
     const tableId = `table:${c.req.param("tableId")}`;
     const body = await c.req.json();
@@ -627,7 +627,7 @@ app.post("/make-server-b530d664/tables/:tableId/leave", async (c) => {
   }
 });
 
-app.post("/make-server-b530d664/tables/:tableId/heartbeat", async (c) => {
+app.post("/server/tables/:tableId/heartbeat", async (c) => {
   try {
     const tableId = `table:${c.req.param("tableId")}`;
     const body = await c.req.json();
@@ -652,7 +652,7 @@ app.post("/make-server-b530d664/tables/:tableId/heartbeat", async (c) => {
   }
 });
 
-app.get("/make-server-b530d664/wallet/:userId", async (c) => {
+app.get("/server/wallet/:userId", async (c) => {
   try {
     const userId = c.req.param("userId");
     const email = c.req.query("email") || "";
@@ -664,7 +664,7 @@ app.get("/make-server-b530d664/wallet/:userId", async (c) => {
   }
 });
 
-app.post("/make-server-b530d664/wallet/transactions", async (c) => {
+app.post("/server/wallet/transactions", async (c) => {
   try {
     const body = await c.req.json();
     const { userId, email, amount, direction, kind, description } = body;
@@ -703,7 +703,7 @@ app.post("/make-server-b530d664/wallet/transactions", async (c) => {
   }
 });
 
-app.post("/make-server-b530d664/wallet/withdrawals", async (c) => {
+app.post("/server/wallet/withdrawals", async (c) => {
   try {
     const body = await c.req.json();
     const {
@@ -775,7 +775,7 @@ app.post("/make-server-b530d664/wallet/withdrawals", async (c) => {
   }
 });
 
-app.get("/make-server-b530d664/wallet/admin/withdrawals", async (c) => {
+app.get("/server/wallet/admin/withdrawals", async (c) => {
   try {
     return c.json({ withdrawals: await getAdminWithdrawals() });
   } catch (error) {
@@ -784,7 +784,7 @@ app.get("/make-server-b530d664/wallet/admin/withdrawals", async (c) => {
   }
 });
 
-app.post("/make-server-b530d664/wallet/admin/withdrawals/status", async (c) => {
+app.post("/server/wallet/admin/withdrawals/status", async (c) => {
   try {
     const body = await c.req.json();
     const { withdrawalId, status, rejectionReason } = body;
@@ -843,7 +843,7 @@ app.post("/make-server-b530d664/wallet/admin/withdrawals/status", async (c) => {
   }
 });
 
-app.post("/make-server-b530d664/wallet/deposits/checkout-pro", async (c) => {
+app.post("/server/wallet/deposits/checkout-pro", async (c) => {
   try {
     const accessToken = Deno.env.get("MERCADO_PAGO_ACCESS_TOKEN");
     if (!accessToken) {
@@ -859,7 +859,7 @@ app.post("/make-server-b530d664/wallet/deposits/checkout-pro", async (c) => {
 
     const wallet = await getWallet(userId, email);
     const depositId = `deposit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const notificationUrl = `${new URL(c.req.url).origin}/functions/v1/make-server-b530d664/wallet/mercadopago/webhook`;
+    const notificationUrl = `${new URL(c.req.url).origin}/functions/v1/server/wallet/mercadopago/webhook`;
 
     const pendingWallet = appendTransaction(wallet, {
       id: depositId,
@@ -934,7 +934,7 @@ app.post("/make-server-b530d664/wallet/deposits/checkout-pro", async (c) => {
   }
 });
 
-app.post("/make-server-b530d664/wallet/mercadopago/webhook", async (c) => {
+app.post("/server/wallet/mercadopago/webhook", async (c) => {
   try {
     const accessToken = Deno.env.get("MERCADO_PAGO_ACCESS_TOKEN");
     if (!accessToken) {

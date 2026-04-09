@@ -1,5 +1,5 @@
 import { supabase } from "../../lib/supabase";
-import { projectId } from "/utils/supabase/info";
+import { projectId, publicAnonKey } from "/utils/supabase/info";
 
 export interface TableInfo {
   id: string;
@@ -93,8 +93,11 @@ interface RoomPlayerRow {
 }
 
 const TURN_DURATION_MS = 15000;
+const supabaseKey =
+  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim() ||
+  publicAnonKey;
 const FUNCTION_URL =
-  `${((import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim() || `https://${projectId}.supabase.co`)}/functions/v1/make-server-b530d664`;
+  `${((import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim() || `https://${projectId}.supabase.co`)}/functions/v1/server`;
 
 const authFetch = async <T>(path: string, method: string = "GET", body?: unknown): Promise<ApiResponse<T>> => {
   const {
@@ -110,6 +113,7 @@ const authFetch = async <T>(path: string, method: string = "GET", body?: unknown
       method,
       headers: {
         "Content-Type": "application/json",
+        apikey: supabaseKey,
         Authorization: `Bearer ${session.access_token}`,
       },
       body: body ? JSON.stringify(body) : undefined,

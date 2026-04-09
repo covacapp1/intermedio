@@ -57,6 +57,13 @@ const emptyUserData: UserData = {
 
 const isBrowser = typeof window !== "undefined";
 const TURN_DURATION_MS = 15000;
+const getAuthRedirectUrl = () => {
+  if (isBrowser) {
+    return `${window.location.origin}/`;
+  }
+
+  return "https://intermedio-ten.vercel.app/";
+};
 
 function App() {
   const [currentView, setCurrentView] = useState<AppView>("login");
@@ -506,6 +513,7 @@ function App() {
       email: normalizedEmail,
       password,
       options: {
+        emailRedirectTo: getAuthRedirectUrl(),
         data: {
           username: normalizedUsername,
           first_name: firstName,

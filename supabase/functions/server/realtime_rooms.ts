@@ -53,13 +53,6 @@ const serviceClient = () =>
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
 
-const authClient = () =>
-  createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-
 const createDeck = (): Card[] => {
   const suits = ["oros", "copas", "espadas", "bastos"];
   const values = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12];
@@ -184,7 +177,7 @@ const requireUserId = async (authorizationHeader: string | undefined) => {
   }
 
   const token = authorizationHeader.slice("Bearer ".length);
-  const { data, error } = await authClient().auth.getUser(token);
+  const { data, error } = await serviceClient().auth.getUser(token);
   if (error || !data.user) {
     throw new Error("Unauthorized");
   }
@@ -193,7 +186,7 @@ const requireUserId = async (authorizationHeader: string | undefined) => {
 };
 
 export const registerRealtimeRoomRoutes = (app: Hono) => {
-  app.post("/make-server-b530d664/realtime/rooms", async (c) => {
+  app.post("/server/realtime/rooms", async (c) => {
     try {
       const userId = await requireUserId(c.req.header("Authorization"));
       const body = await c.req.json();
@@ -253,7 +246,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
     }
   });
 
-  app.post("/make-server-b530d664/realtime/rooms/:roomId/join", async (c) => {
+  app.post("/server/realtime/rooms/:roomId/join", async (c) => {
     try {
       const userId = await requireUserId(c.req.header("Authorization"));
       const roomId = c.req.param("roomId");
@@ -328,7 +321,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
     }
   });
 
-  app.post("/make-server-b530d664/realtime/rooms/:roomId/bet", async (c) => {
+  app.post("/server/realtime/rooms/:roomId/bet", async (c) => {
     try {
       const userId = await requireUserId(c.req.header("Authorization"));
       const roomId = c.req.param("roomId");
@@ -419,7 +412,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
     }
   });
 
-  app.post("/make-server-b530d664/realtime/rooms/:roomId/next-round", async (c) => {
+  app.post("/server/realtime/rooms/:roomId/next-round", async (c) => {
     try {
       await requireUserId(c.req.header("Authorization"));
       const roomId = c.req.param("roomId");
@@ -485,7 +478,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
     }
   });
 
-  app.post("/make-server-b530d664/realtime/rooms/:roomId/leave", async (c) => {
+  app.post("/server/realtime/rooms/:roomId/leave", async (c) => {
     try {
       const userId = await requireUserId(c.req.header("Authorization"));
       const roomId = c.req.param("roomId");
@@ -513,7 +506,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
     }
   });
 
-  app.post("/make-server-b530d664/realtime/rooms/:roomId/heartbeat", async (c) => {
+  app.post("/server/realtime/rooms/:roomId/heartbeat", async (c) => {
     try {
       const userId = await requireUserId(c.req.header("Authorization"));
       const roomId = c.req.param("roomId");

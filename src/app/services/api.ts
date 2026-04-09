@@ -13,7 +13,13 @@ import {
   type WithdrawalRequest,
 } from "../types/wallet";
 
-const API_URL = `https://${projectId}.supabase.co/functions/v1/make-server-b530d664`;
+const supabaseUrl =
+  (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim() ||
+  `https://${projectId}.supabase.co`;
+const supabaseAnonKey =
+  (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim() ||
+  publicAnonKey;
+const API_URL = `${supabaseUrl}/functions/v1/server`;
 const LOCAL_TABLES_KEY = "intermedio_local_tables";
 const LOCAL_WALLETS_KEY = "intermedio_wallets";
 
@@ -716,7 +722,7 @@ async function apiCall<T>(
       method,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${publicAnonKey}`,
+        'apikey': supabaseAnonKey,
       },
     };
 

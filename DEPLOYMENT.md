@@ -29,6 +29,14 @@ npm run build
 
 Publica la carpeta `dist/` en tu hosting final.
 
+Importante: si abres la app con `npm run dev`, va a vivir en `localhost` o en la IP local de tu PC. Eso sirve para pruebas, pero no para usarla "siempre online" desde el celular. Para que funcione de forma permanente, el frontend tiene que quedar publicado en una URL real, por ejemplo:
+
+- `https://intermedio.vercel.app`
+- `https://intermedio.netlify.app`
+- tu propio dominio, por ejemplo `https://intermedio.com`
+
+Una vez publicado, esa URL publica pasa a ser el origen real de la app.
+
 ## 3. Deploy de la funcion de Supabase
 
 ```bash
@@ -50,6 +58,8 @@ En produccion, usa tu dominio final como base. Ejemplo:
 - Pendiente: `https://tu-dominio.com/?payment=pending`
 
 La app las arma automaticamente desde `window.location.origin`, asi que lo importante es publicar el frontend en su dominio real.
+
+Si el frontend corre en local, `window.location.origin` sera algo como `http://localhost:5173` o `http://192.168.x.x:5173`, y Mercado Pago intentara volver ahi. Por eso desde el celular te fallaba: no estabas usando una URL publica permanente.
 
 ## 5. Webhook de Mercado Pago
 
@@ -98,3 +108,11 @@ Para algo mas fuerte, el siguiente paso recomendado es mover autenticacion a Sup
 - Desplegar la Edge Function.
 - Probar una carga real o sandbox.
 - Probar un retiro pendiente, uno aprobado y uno rechazado.
+
+## 9. Redeploy rapido paso a paso
+
+1. Guarda y sube tus cambios a Git.
+2. Genera el build del frontend con `npm run build`.
+3. Publica `dist/` en tu hosting.
+4. Redeploya la Edge Function con `supabase functions deploy server`.
+5. Verifica que el frontend publicado abra desde tu celular usando la URL publica, no `localhost`.
