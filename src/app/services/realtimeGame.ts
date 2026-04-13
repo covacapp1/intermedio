@@ -100,24 +100,50 @@ const FUNCTION_URL =
   `${((import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim() || `https://${projectId}.supabase.co`)}/functions/v1/server`;
 
 const authFetch = async <T>(path: string, method: string = "GET", body?: unknown): Promise<ApiResponse<T>> => {
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.access_token) {
-    return { error: "No active session" };
-  }
-
   try {
-    const response = await fetch(`${FUNCTION_URL}${path}`, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        apikey: supabaseKey,
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
+    const getAccessToken = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.access_token) {
+        return session.access_token;
+      }
+
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error || !data.session?.access_token) {
+        return null;
+      }
+
+      return data.session.access_token;
+    };
+
+    const doRequest = async (accessToken: string) =>
+      fetch(`${FUNCTION_URL}${path}`, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          apikey: supabaseKey,
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      return { error: "No active session" };
+    }
+
+    let response = await doRequest(accessToken);
+
+    if (response.status === 401) {
+      const refreshedToken = await getAccessToken();
+      if (!refreshedToken) {
+        return { error: "Unauthorized" };
+      }
+      response = await doRequest(refreshedToken);
+    }
+
     const data = await response.json();
 
     if (!response.ok) {
