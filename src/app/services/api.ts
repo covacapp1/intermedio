@@ -1,4 +1,5 @@
 import { projectId, publicAnonKey } from '/utils/supabase/info';
+import { supabase } from "../../lib/supabase";
 import {
   STARTING_BALANCE,
   type AdminWithdrawalItem,
@@ -738,6 +739,67 @@ async function apiCall<T>(
   }
 }
 
+async function apiCallAuthenticated<T>(
+  endpoint: string,
+  method: string = 'GET',
+  body?: any
+): Promise<ApiResponse<T>> {
+  try {
+    const getAccessToken = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.access_token) {
+        return session.access_token;
+      }
+
+      const { data, error } = await supabase.auth.refreshSession();
+      if (error || !data.session?.access_token) {
+        return null;
+      }
+
+      return data.session.access_token;
+    };
+
+    const doRequest = async (accessToken: string) =>
+      fetch(`${API_URL}${endpoint}`, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: supabaseAnonKey,
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+
+    const accessToken = await getAccessToken();
+    if (!accessToken) {
+      return { error: 'No active session' };
+    }
+
+    let response = await doRequest(accessToken);
+    if (response.status === 401) {
+      const refreshedToken = await getAccessToken();
+      if (!refreshedToken) {
+        return { error: 'Unauthorized' };
+      }
+      response = await doRequest(refreshedToken);
+    }
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { error: data.error || 'Request failed' };
+    }
+
+    return { data };
+  } catch (error) {
+    console.error('Authenticated API call error:', error);
+    return { error: error instanceof Error ? error.message : 'Network error' };
+  }
+}
+
 export const api = {
   // Get all available tables
   getTables: async (): Promise<ApiResponse<{ tables: TableInfo[] }>> => {
@@ -838,7 +900,7 @@ export const api = {
 
   getWalletSummary: async (userId: string, email: string): Promise<ApiResponse<WalletSummary>> => {
     return withLocalFallback(
-      () => apiCall(`/wallet/${encodeURIComponent(userId)}?email=${encodeURIComponent(email)}`),
+      () => apiCallAuthenticated(`/wallet/${encodeURIComponent(userId)}?email=${encodeURIComponent(email)}`),
       () => localApi.getWalletSummary(userId, email)
     );
   },
@@ -846,12 +908,12 @@ export const api = {
   createDepositCheckout: async (
     payload: CreateDepositCheckoutPayload
   ): Promise<ApiResponse<CreateDepositCheckoutResponse>> => {
-    return apiCall('/wallet/deposits/checkout-pro', 'POST', payload);
+    return apiCallAuthenticated('/wallet/deposits/checkout-pro', 'POST', payload);
   },
 
   createWithdrawal: async (payload: CreateWithdrawalPayload): Promise<ApiResponse<WalletSummary>> => {
     return withLocalFallback(
-      () => apiCall('/wallet/withdrawals', 'POST', payload),
+      () => apiCallAuthenticated('/wallet/withdrawals', 'POST', payload),
       () => localApi.createWithdrawal(payload)
     );
   },
@@ -860,14 +922,14 @@ export const api = {
     payload: RecordWalletMovementPayload
   ): Promise<ApiResponse<WalletSummary>> => {
     return withLocalFallback(
-      () => apiCall('/wallet/transactions', 'POST', payload),
+      () => apiCallAuthenticated('/wallet/transactions', 'POST', payload),
       () => localApi.recordWalletMovement(payload)
     );
   },
 
   getAdminWithdrawals: async (): Promise<ApiResponse<{ withdrawals: AdminWithdrawalItem[] }>> => {
     return withLocalFallback(
-      () => apiCall('/wallet/admin/withdrawals'),
+      () => apiCallAuthenticated('/wallet/admin/withdrawals'),
       () => localApi.getAdminWithdrawals()
     );
   },
@@ -876,7 +938,7 @@ export const api = {
     payload: UpdateWithdrawalStatusPayload
   ): Promise<ApiResponse<{ withdrawals: AdminWithdrawalItem[] }>> => {
     return withLocalFallback(
-      () => apiCall('/wallet/admin/withdrawals/status', 'POST', payload),
+      () => apiCallAuthenticated('/wallet/admin/withdrawals/status', 'POST', payload),
       () => localApi.updateWithdrawalStatus(payload)
     );
   },

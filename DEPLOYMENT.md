@@ -14,6 +14,7 @@ VITE_ADMIN_EMAIL=grafica.covac@hotmail.com
 ```bash
 supabase secrets set MERCADO_PAGO_ACCESS_TOKEN=APP_USR-...
 supabase secrets set RESEND_API_KEY=re_...
+supabase secrets set ADMIN_EMAIL=grafica.covac@hotmail.com
 supabase secrets set WITHDRAWAL_NOTIFICATION_FROM="Intermedio <retiros@tu-dominio.com>"
 supabase secrets set WITHDRAWAL_NOTIFICATION_TO="grafica.covac@hotmail.com"
 ```
@@ -46,7 +47,7 @@ supabase functions deploy server
 La app ya consume la funcion publicada en:
 
 ```text
-https://<project-ref>.supabase.co/functions/v1/make-server-b530d664
+https://<project-ref>.supabase.co/functions/v1/server
 ```
 
 ## 4. URLs de retorno de Mercado Pago
@@ -66,7 +67,7 @@ Si el frontend corre en local, `window.location.origin` sera algo como `http://l
 La preferencia de Checkout Pro ya se crea con este webhook:
 
 ```text
-https://<project-ref>.supabase.co/functions/v1/make-server-b530d664/wallet/mercadopago/webhook
+https://<project-ref>.supabase.co/functions/v1/server/wallet/mercadopago/webhook
 ```
 
 Tambien conviene registrarlo en el panel de Mercado Pago para tener trazabilidad extra.
@@ -96,6 +97,12 @@ Hoy el panel admin se habilita si el email del usuario coincide con:
 
 ```env
 VITE_ADMIN_EMAIL
+```
+
+Y en backend conviene espejarlo como secret:
+
+```bash
+supabase secrets set ADMIN_EMAIL=grafica.covac@hotmail.com
 ```
 
 Para algo mas fuerte, el siguiente paso recomendado es mover autenticacion a Supabase Auth y proteger el panel con roles.

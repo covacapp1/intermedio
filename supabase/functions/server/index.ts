@@ -1,4 +1,4 @@
-import { Hono } from "npm:hono";
+import { Hono, type Context } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import * as kv from "./kv_store.ts";
@@ -103,6 +103,11 @@ interface DepositRecord {
   approvedAt?: number;
 }
 
+interface AuthenticatedUser {
+  id: string;
+  email: string;
+}
+
 const createDeck = (): Card[] => {
   const suits = ["oros", "copas", "espadas", "bastos"];
   const values = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12];
@@ -153,6 +158,7 @@ const randomTableCode = (): string => {
 
 const STARTING_BALANCE = 0;
 const TURN_DURATION_MS = 15000;
+const DEFAULT_ADMIN_EMAIL = "grafica.covac@hotmail.com";
 
 const createEmptyWallet = (userId: string, email: string): WalletSummary => ({
   userId,
@@ -300,6 +306,81 @@ const sendWithdrawalEmail = async (withdrawal: WithdrawalRequest) => {
       text,
     }),
   });
+};
+
+const normalizeEmail = (value: string | undefined | null) => (value || "").trim().toLowerCase();
+
+const getAdminEmail = () => normalizeEmail(Deno.env.get("ADMIN_EMAIL") || DEFAULT_ADMIN_EMAIL);
+
+const getRequestBearerToken = (authorizationHeader: string | undefined) => {
+  if (!authorizationHeader) {
+    return "";
+  }
+
+  const [scheme, token] = authorizationHeader.split(" ");
+  if (scheme?.toLowerCase() !== "bearer" || !token) {
+    return "";
+  }
+
+  return token.trim();
+};
+
+const getAuthenticatedUser = async (c: Context) => {
+  const accessToken = getRequestBearerToken(c.req.header("Authorization"));
+  if (!accessToken) {
+    return { error: c.json({ error: "Unauthorized" }, 401) };
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseApiKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !supabaseApiKey) {
+    console.log("Supabase auth env vars are missing");
+    return { error: c.json({ error: "Auth is not configured" }, 500) };
+  }
+
+  const authResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      apikey: supabaseApiKey,
+    },
+  });
+
+  if (!authResponse.ok) {
+    return { error: c.json({ error: "Unauthorized" }, 401) };
+  }
+
+  const authUser = await authResponse.json();
+  if (!authUser?.id || !authUser?.email) {
+    return { error: c.json({ error: "Unauthorized" }, 401) };
+  }
+
+  return {
+    user: {
+      id: String(authUser.id),
+      email: normalizeEmail(String(authUser.email)),
+    } satisfies AuthenticatedUser,
+  };
+};
+
+const ensureSameUser = (c: Context, authUser: AuthenticatedUser, userId: string, email?: string) => {
+  if (authUser.id !== userId) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const normalizedEmail = normalizeEmail(email);
+  if (normalizedEmail && authUser.email !== normalizedEmail) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  return null;
+};
+
+const ensureAdmin = (c: Context, authUser: AuthenticatedUser) => {
+  if (authUser.email !== getAdminEmail()) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  return null;
 };
 
 const app = new Hono();
@@ -649,9 +730,19 @@ app.post("/server/tables/:tableId/heartbeat", async (c) => {
 
 app.get("/server/wallet/:userId", async (c) => {
   try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
     const userId = c.req.param("userId");
     const email = c.req.query("email") || "";
-    const wallet = await getWallet(userId, email);
+    const forbiddenResponse = ensureSameUser(c, auth.user, userId, email);
+    if (forbiddenResponse) {
+      return forbiddenResponse;
+    }
+
+    const wallet = await getWallet(auth.user.id, auth.user.email || email);
     return c.json(wallet);
   } catch (error) {
     console.log("Error fetching wallet:", error);
@@ -661,6 +752,11 @@ app.get("/server/wallet/:userId", async (c) => {
 
 app.post("/server/wallet/transactions", async (c) => {
   try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
     const body = await c.req.json();
     const { userId, email, amount, direction, kind, description } = body;
 
@@ -668,7 +764,12 @@ app.post("/server/wallet/transactions", async (c) => {
       return c.json({ error: "Missing required fields" }, 400);
     }
 
-    const wallet = await getWallet(userId, email);
+    const forbiddenResponse = ensureSameUser(c, auth.user, userId, email);
+    if (forbiddenResponse) {
+      return forbiddenResponse;
+    }
+
+    const wallet = await getWallet(auth.user.id, auth.user.email);
     const nextBalance = direction === "credit" ? wallet.balance + amount : wallet.balance - amount;
 
     if (direction === "debit" && nextBalance < 0) {
@@ -700,6 +801,11 @@ app.post("/server/wallet/transactions", async (c) => {
 
 app.post("/server/wallet/withdrawals", async (c) => {
   try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
     const body = await c.req.json();
     const {
       userId,
@@ -717,7 +823,12 @@ app.post("/server/wallet/withdrawals", async (c) => {
       return c.json({ error: "Missing required fields" }, 400);
     }
 
-    const wallet = await getWallet(userId, email);
+    const forbiddenResponse = ensureSameUser(c, auth.user, userId, email);
+    if (forbiddenResponse) {
+      return forbiddenResponse;
+    }
+
+    const wallet = await getWallet(auth.user.id, auth.user.email);
     if (amount > wallet.balance) {
       return c.json({ error: "Insufficient balance" }, 400);
     }
@@ -772,6 +883,16 @@ app.post("/server/wallet/withdrawals", async (c) => {
 
 app.get("/server/wallet/admin/withdrawals", async (c) => {
   try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
+    const forbiddenResponse = ensureAdmin(c, auth.user);
+    if (forbiddenResponse) {
+      return forbiddenResponse;
+    }
+
     return c.json({ withdrawals: await getAdminWithdrawals() });
   } catch (error) {
     console.log("Error fetching admin withdrawals:", error);
@@ -781,6 +902,16 @@ app.get("/server/wallet/admin/withdrawals", async (c) => {
 
 app.post("/server/wallet/admin/withdrawals/status", async (c) => {
   try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
+    const forbiddenResponse = ensureAdmin(c, auth.user);
+    if (forbiddenResponse) {
+      return forbiddenResponse;
+    }
+
     const body = await c.req.json();
     const { withdrawalId, status, rejectionReason } = body;
 
@@ -840,6 +971,11 @@ app.post("/server/wallet/admin/withdrawals/status", async (c) => {
 
 app.post("/server/wallet/deposits/checkout-pro", async (c) => {
   try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
     const accessToken = Deno.env.get("MERCADO_PAGO_ACCESS_TOKEN");
     if (!accessToken) {
       return c.json({ error: "Mercado Pago access token is not configured" }, 500);
@@ -852,7 +988,12 @@ app.post("/server/wallet/deposits/checkout-pro", async (c) => {
       return c.json({ error: "Missing required fields" }, 400);
     }
 
-    const wallet = await getWallet(userId, email);
+    const forbiddenResponse = ensureSameUser(c, auth.user, userId, email);
+    if (forbiddenResponse) {
+      return forbiddenResponse;
+    }
+
+    const wallet = await getWallet(auth.user.id, auth.user.email);
     const depositId = `deposit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const notificationUrl = `${new URL(c.req.url).origin}/functions/v1/server/wallet/mercadopago/webhook`;
 
@@ -909,8 +1050,8 @@ app.post("/server/wallet/deposits/checkout-pro", async (c) => {
 
     const depositRecord: DepositRecord = {
       id: depositId,
-      userId,
-      email,
+      userId: auth.user.id,
+      email: auth.user.email,
       amount,
       status: "pending",
       preferenceId: mpData.id,
