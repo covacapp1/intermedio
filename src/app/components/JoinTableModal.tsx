@@ -18,17 +18,18 @@ export function JoinTableModal({
   onConfirm,
   onClose,
 }: JoinTableModalProps) {
-  const [stackAmount, setStackAmount] = useState(2000);
+  const [stackAmount, setStackAmount] = useState("2000");
 
   useEffect(() => {
     if (!isOpen) return;
-    setStackAmount(Math.max(buyIn, 2000));
+    setStackAmount(String(Math.max(buyIn, 2000)));
   }, [buyIn, isOpen]);
 
   if (!isOpen) return null;
 
-  const totalRequired = buyIn + stackAmount;
-  const canAfford = stackAmount > 0 && userBalance >= totalRequired;
+  const parsedStackAmount = Number(stackAmount);
+  const totalRequired = buyIn + (Number.isFinite(parsedStackAmount) ? parsedStackAmount : 0);
+  const canAfford = parsedStackAmount > 0 && userBalance >= totalRequired;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
@@ -63,7 +64,8 @@ export function JoinTableModal({
             <input
               type="number"
               value={stackAmount}
-              onChange={(e) => setStackAmount(Number(e.target.value))}
+              onFocus={(e) => e.currentTarget.select()}
+              onChange={(e) => setStackAmount(e.target.value)}
               min="100"
               step="100"
               className="w-full rounded border-2 border-[#654321] bg-[#D2B48C] px-4 py-3 text-[#3E2723] focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]"
@@ -101,7 +103,7 @@ export function JoinTableModal({
             CANCELAR
           </button>
           <button
-            onClick={() => onConfirm(stackAmount)}
+            onClick={() => onConfirm(parsedStackAmount)}
             disabled={!canAfford}
             className="rounded-lg border-3 border-[#654321] bg-gradient-to-b from-[#D4AF37] to-[#B8941E] py-3 font-bold text-[#3E2723] shadow-lg transition-all hover:from-[#FFD700] hover:to-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-50 active:scale-95"
             style={{ fontFamily: "serif" }}

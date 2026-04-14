@@ -184,6 +184,7 @@ export function Cashier({
                   min="1"
                   step="1"
                   value={depositAmount}
+                  onFocus={(event) => event.currentTarget.select()}
                   onChange={(event) => setDepositAmount(event.target.value)}
                   className="mt-2 w-full rounded border-2 border-[#654321] bg-[#D2B48C] px-4 py-3 text-[#3E2723] focus:outline-none focus:border-[#D4AF37]"
                 />
@@ -214,6 +215,7 @@ export function Cashier({
                     min="1"
                     step="1"
                     value={withdrawAmount}
+                    onFocus={(event) => event.currentTarget.select()}
                     onChange={(event) => setWithdrawAmount(event.target.value)}
                     className="w-full rounded border-2 border-[#654321] bg-[#D2B48C] px-4 py-3 text-[#3E2723] focus:outline-none focus:border-[#D4AF37]"
                     placeholder="Monto en INT"

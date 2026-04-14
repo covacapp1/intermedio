@@ -7,13 +7,21 @@ interface CreateTableModalProps {
 
 export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
   const [tableName, setTableName] = useState("");
-  const [buyIn, setBuyIn] = useState(1000);
-  const [initialStack, setInitialStack] = useState(2000);
+  const [buyIn, setBuyIn] = useState("1000");
+  const [initialStack, setInitialStack] = useState("2000");
   const [maxPlayers, setMaxPlayers] = useState(3);
 
   const handleCreate = () => {
+    const parsedBuyIn = Number(buyIn);
+    const parsedInitialStack = Number(initialStack);
+
+    if (!Number.isFinite(parsedBuyIn) || parsedBuyIn <= 0 || !Number.isFinite(parsedInitialStack) || parsedInitialStack <= 0) {
+      alert("Ingresa montos validos para crear la mesa");
+      return;
+    }
+
     if (tableName.trim()) {
-      onCreate(tableName.trim(), buyIn, initialStack, maxPlayers);
+      onCreate(tableName.trim(), parsedBuyIn, parsedInitialStack, maxPlayers);
     } else {
       alert("Por favor, ingresa un nombre para la mesa");
     }
@@ -58,7 +66,8 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
             <input
               type="number"
               value={buyIn}
-              onChange={(e) => setBuyIn(Number(e.target.value))}
+              onFocus={(e) => e.currentTarget.select()}
+              onChange={(e) => setBuyIn(e.target.value)}
               min="100"
               step="100"
               className="w-full rounded border-2 border-[#654321] bg-[#D2B48C] px-4 py-3 text-[#3E2723] placeholder-[#8B7355] focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]"
@@ -72,7 +81,8 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
             <input
               type="number"
               value={initialStack}
-              onChange={(e) => setInitialStack(Number(e.target.value))}
+              onFocus={(e) => e.currentTarget.select()}
+              onChange={(e) => setInitialStack(e.target.value)}
               min="100"
               step="100"
               className="w-full rounded border-2 border-[#654321] bg-[#D2B48C] px-4 py-3 text-[#3E2723] placeholder-[#8B7355] focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]"
@@ -98,13 +108,13 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
               <strong className="text-[#F5DEB3]">Jugadores:</strong> hasta {maxPlayers} por mesa
             </p>
             <p className="mt-1 text-sm text-[#D2B48C]">
-              <strong className="text-[#F5DEB3]">Buy-in:</strong> todos los jugadores deben ingresar con {buyIn} INT
+              <strong className="text-[#F5DEB3]">Buy-in:</strong> todos los jugadores deben ingresar con {Number(buyIn) || 0} INT
             </p>
             <p className="mt-1 text-sm text-[#D2B48C]">
-              <strong className="text-[#F5DEB3]">Tu stack inicial:</strong> entraras a jugar con {initialStack} INT
+              <strong className="text-[#F5DEB3]">Tu stack inicial:</strong> entraras a jugar con {Number(initialStack) || 0} INT
             </p>
             <p className="mt-1 text-sm text-[#D2B48C]">
-              <strong className="text-[#F5DEB3]">Descuento total al crear:</strong> {buyIn + initialStack} INT
+              <strong className="text-[#F5DEB3]">Descuento total al crear:</strong> {(Number(buyIn) || 0) + (Number(initialStack) || 0)} INT
             </p>
             <p className="mt-1 text-sm text-[#D2B48C]">
               <strong className="text-[#F5DEB3]">Inicio:</strong> Automatico cuando se llena la mesa

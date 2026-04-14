@@ -19,14 +19,20 @@ export function ControlPanel({
   onPass,
   message,
 }: ControlPanelProps) {
-  const [bet, setBet] = useState(200);
+  const [bet, setBet] = useState("200");
 
   useEffect(() => {
-    setBet(Math.min(bet, maxBet));
+    setBet((currentBet) => {
+      const parsedBet = Number(currentBet);
+      if (!Number.isFinite(parsedBet)) {
+        return String(maxBet);
+      }
+      return String(Math.min(parsedBet, maxBet));
+    });
   }, [maxBet]);
 
   const handlePlayRound = () => {
-    onPlayRound(bet);
+    onPlayRound(Number(bet) || 0);
   };
 
   return (
@@ -41,7 +47,8 @@ export function ControlPanel({
         step="50"
         max={maxBet}
         value={bet}
-        onChange={(e) => setBet(Number(e.target.value))}
+        onFocus={(e) => e.currentTarget.select()}
+        onChange={(e) => setBet(e.target.value)}
         className="w-full px-3 py-2 sm:py-3 text-sm sm:text-base border border-[#2f4f3f] rounded-lg bg-[#0f1f19] text-white focus:outline focus:outline-2 focus:outline-[#3a7d5a]"
       />
       <div className="grid grid-cols-2 gap-2">
