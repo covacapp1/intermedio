@@ -9,6 +9,8 @@ interface AdminWithdrawalsProps {
   onResolve: (withdrawalId: string, status: "approved" | "rejected", rejectionReason?: string) => Promise<void>;
 }
 
+const HIGH_VALUE_WITHDRAWAL_INT = 100000;
+
 const formatDate = (timestamp: number) =>
   new Intl.DateTimeFormat("es-AR", {
     dateStyle: "short",
@@ -90,6 +92,9 @@ export function AdminWithdrawals({
                       <p>Saldo wallet actual: {formatInt(withdrawal.walletBalance)}</p>
                       <p>Solicitado: {formatDate(withdrawal.requestedAt)}</p>
                       <p className="uppercase tracking-[0.2em] text-[#D4AF37]">{withdrawal.status}</p>
+                      {withdrawal.amount >= HIGH_VALUE_WITHDRAWAL_INT ? (
+                        <p className="font-semibold text-[#FFD700]">Revision extra requerida por monto alto</p>
+                      ) : null}
                       {withdrawal.rejectionReason ? <p>Motivo rechazo: {withdrawal.rejectionReason}</p> : null}
                     </div>
 

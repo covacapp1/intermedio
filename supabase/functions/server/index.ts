@@ -114,6 +114,13 @@ interface AuthenticatedUser {
   email: string;
 }
 
+interface UserProfileRecord {
+  first_name?: string | null;
+  last_name?: string | null;
+  dni?: string | null;
+  email?: string | null;
+}
+
 const createDeck = (): Card[] => {
   const suits = ["oros", "copas", "espadas", "bastos"];
   const values = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12];
@@ -165,6 +172,7 @@ const randomTableCode = (): string => {
 const STARTING_BALANCE = 0;
 const TURN_DURATION_MS = 15000;
 const DEFAULT_ADMIN_EMAIL = "grafica.covac@hotmail.com";
+const HIGH_VALUE_WITHDRAWAL_INT = 100000;
 
 const createEmptyWallet = (userId: string, email: string): WalletSummary => ({
   userId,
@@ -373,6 +381,9 @@ const sendWithdrawalEmail = async (withdrawal: WithdrawalRequest) => {
 };
 
 const normalizeEmail = (value: string | undefined | null) => (value || "").trim().toLowerCase();
+const normalizeDni = (value: string | undefined | null) => (value || "").replace(/\D/g, "").trim();
+const getProfileFullName = (profile: UserProfileRecord | null) =>
+  [profile?.first_name?.trim(), profile?.last_name?.trim()].filter(Boolean).join(" ").trim();
 
 const getAdminEmail = () => normalizeEmail(Deno.env.get("ADMIN_EMAIL") || DEFAULT_ADMIN_EMAIL);
 
@@ -424,6 +435,33 @@ const getAuthenticatedUser = async (c: Context) => {
       email: normalizeEmail(String(authUser.email)),
     } satisfies AuthenticatedUser,
   };
+};
+
+const getUserProfile = async (userId: string): Promise<UserProfileRecord | null> => {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseApiKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  if (!supabaseUrl || !supabaseApiKey) {
+    return null;
+  }
+
+  const profileResponse = await fetch(
+    `${supabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=first_name,last_name,dni,email`,
+    {
+      headers: {
+        apikey: supabaseApiKey,
+        Authorization: `Bearer ${supabaseApiKey}`,
+      },
+    }
+  );
+
+  if (!profileResponse.ok) {
+    console.log("Failed to fetch profile for withdrawal validation");
+    return null;
+  }
+
+  const profiles = await profileResponse.json();
+  return Array.isArray(profiles) && profiles.length > 0 ? (profiles[0] as UserProfileRecord) : null;
 };
 
 const ensureSameUser = (c: Context, authUser: AuthenticatedUser, userId: string, email?: string) => {
@@ -874,8 +912,6 @@ app.post("/server/wallet/withdrawals", async (c) => {
     const {
       userId,
       email,
-      fullName,
-      dni,
       amount,
       method,
       accountHolder,
@@ -883,7 +919,7 @@ app.post("/server/wallet/withdrawals", async (c) => {
       notes,
     } = body;
 
-    if (!userId || !email || !fullName || !dni || !amount || !method || !accountHolder || !accountDestination) {
+    if (!userId || !email || !amount || !method || !accountHolder || !accountDestination) {
       return c.json({ error: "Missing required fields" }, 400);
     }
 
@@ -892,42 +928,66 @@ app.post("/server/wallet/withdrawals", async (c) => {
       return forbiddenResponse;
     }
 
+    const normalizedAmount = Math.floor(Number(amount));
+    if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+      return c.json({ error: "Invalid withdrawal amount" }, 400);
+    }
+
+    const profile = await getUserProfile(auth.user.id);
+    const profileFullName = getProfileFullName(profile);
+    const profileDni = normalizeDni(profile?.dni);
+    const profileEmail = normalizeEmail(profile?.email || auth.user.email);
+    if (!profileFullName || !profileDni || !profileEmail) {
+      return c.json({ error: "Complete your profile with name, DNI and email before requesting a withdrawal" }, 400);
+    }
+
+    const normalizedAccountHolder = String(accountHolder || "").trim();
+    const normalizedAccountDestination = String(accountDestination || "").trim();
+    const normalizedNotes = String(notes || "").trim();
+    if (!normalizedAccountHolder || !normalizedAccountDestination) {
+      return c.json({ error: "Missing required fields" }, 400);
+    }
+
     const wallet = await getWallet(auth.user.id, auth.user.email);
-    if (amount > wallet.balance) {
+    if (normalizedAmount > wallet.balance) {
       return c.json({ error: "Insufficient balance" }, 400);
     }
 
     const withdrawal: WithdrawalRequest = {
       id: `withdrawal_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      amount,
+      amount: normalizedAmount,
       method,
       status: "pending",
       requestedAt: Date.now(),
-      fullName,
-      dni,
-      email,
-      accountHolder,
-      accountDestination,
-      notes,
+      fullName: profileFullName,
+      dni: profileDni,
+      email: profileEmail,
+      accountHolder: normalizedAccountHolder,
+      accountDestination: normalizedAccountDestination,
+      notes:
+        normalizedAmount >= HIGH_VALUE_WITHDRAWAL_INT
+          ? `${normalizedNotes ? `${normalizedNotes} | ` : ""}REQUIERE REVISION EXTRA`
+          : normalizedNotes || undefined,
     };
 
     const nextWallet = appendTransaction(
       {
         ...wallet,
-        balance: wallet.balance - amount,
+        balance: wallet.balance - normalizedAmount,
         withdrawals: sortWithdrawals([withdrawal, ...wallet.withdrawals]),
       },
       {
         id: `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         kind: "withdrawal",
         direction: "debit",
-        amount,
+        amount: normalizedAmount,
         status: "pending",
         description: "Retiro solicitado",
         createdAt: Date.now(),
         metadata: {
           withdrawalId: withdrawal.id,
           method,
+          highReview: normalizedAmount >= HIGH_VALUE_WITHDRAWAL_INT ? "true" : "false",
         },
       }
     );

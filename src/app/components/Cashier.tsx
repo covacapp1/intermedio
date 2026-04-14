@@ -44,6 +44,8 @@ const transactionLabel = (transaction: WalletTransaction) => {
   return "Movimiento";
 };
 
+const HIGH_VALUE_WITHDRAWAL_INT = 100000;
+
 export function Cashier({
   userBalance,
   walletSummary,
@@ -91,6 +93,17 @@ export function Cashier({
   const submitWithdrawal = async () => {
     const amount = Number(withdrawAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
+      alert("Ingresa un monto valido para retirar.");
+      return;
+    }
+
+    if (amount > userBalance) {
+      alert("No puedes retirar mas INT de los que tienes disponibles.");
+      return;
+    }
+
+    if (!profileData.fullName || !profileData.dni || !profileData.email) {
+      alert("Completa nombre, DNI y email en tu perfil antes de retirar.");
       return;
     }
 
@@ -257,6 +270,11 @@ export function Cashier({
                 <div className="mt-2 text-xs text-[#D2B48C]">
                   Retiras {formatInt(Number(withdrawAmount) || 0)} y recibes {formatArs(Number(withdrawAmount) || 0)}.
                 </div>
+                {Number(withdrawAmount) >= HIGH_VALUE_WITHDRAWAL_INT ? (
+                  <div className="mt-2 rounded border border-[#D4AF37]/40 bg-black/20 px-3 py-2 text-xs text-[#F5DEB3]">
+                    Este retiro requiere revision extra por monto alto.
+                  </div>
+                ) : null}
 
                 <button
                   onClick={submitWithdrawal}
@@ -265,6 +283,7 @@ export function Cashier({
                     !profileData.fullName ||
                     !profileData.dni ||
                     !profileData.email ||
+                    Number(withdrawAmount) > userBalance ||
                     !accountHolder ||
                     !accountDestination
                   }
