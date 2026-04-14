@@ -70,6 +70,19 @@ export interface CreateDepositCheckoutResponse {
   transactionId: string;
 }
 
+export interface ReconcileDepositPayload {
+  userId: string;
+  email: string;
+  paymentId: string;
+}
+
+export interface ReconcileDepositResponse {
+  approved: boolean;
+  paymentStatus?: string;
+  depositId?: string;
+  wallet: WalletSummary;
+}
+
 export interface CreateWithdrawalPayload {
   userId: string;
   email: string;

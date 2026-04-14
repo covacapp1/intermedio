@@ -103,6 +103,12 @@ interface DepositRecord {
   approvedAt?: number;
 }
 
+interface MercadoPagoPayment {
+  id?: string | number;
+  status?: string;
+  external_reference?: string;
+}
+
 interface AuthenticatedUser {
   id: string;
   email: string;
@@ -209,6 +215,64 @@ const appendTransaction = (wallet: WalletSummary, transaction: WalletTransaction
   ...wallet,
   transactions: sortTransactions([transaction, ...wallet.transactions]),
 });
+
+const approveDepositFromPayment = async (payment: MercadoPagoPayment) => {
+  const depositId = payment.external_reference as string | undefined;
+  if (!depositId) {
+    return { approved: false, reason: "missing_external_reference" };
+  }
+
+  const deposit = await kv.get(depositKey(depositId)) as DepositRecord | null;
+  if (!deposit) {
+    return { approved: false, reason: "deposit_not_found" };
+  }
+
+  if (deposit.status === "approved") {
+    const wallet = await getWallet(deposit.userId, deposit.email);
+    return { approved: true, wallet, depositId, alreadyApproved: true };
+  }
+
+  if (payment.status !== "approved") {
+    return { approved: false, reason: "payment_not_approved", paymentStatus: payment.status || "unknown" };
+  }
+
+  const wallet = await getWallet(deposit.userId, deposit.email);
+  const alreadyRecorded = wallet.transactions.some(
+    (transaction) => transaction.metadata?.depositId === depositId && transaction.status === "approved"
+  );
+
+  const nextWallet = alreadyRecorded
+    ? wallet
+    : await saveWallet({
+        ...wallet,
+        balance: wallet.balance + deposit.amount,
+        transactions: sortTransactions(
+          wallet.transactions.map((transaction) =>
+            transaction.id === depositId
+              ? {
+                  ...transaction,
+                  status: "approved" as const,
+                  description: "Carga acreditada por confirmacion de pago",
+                  metadata: {
+                    ...(transaction.metadata || {}),
+                    depositId,
+                    paymentId: String(payment.id || ""),
+                  },
+                }
+              : transaction
+          )
+        ),
+      });
+
+  await kv.set(depositKey(depositId), {
+    ...deposit,
+    status: "approved",
+    paymentId: String(payment.id || ""),
+    approvedAt: Date.now(),
+  });
+
+  return { approved: true, wallet: nextWallet, depositId, alreadyApproved: false };
+};
 
 const getNextPendingTurn = (table: GameTable, startIndex: number): number => {
   for (let offset = 1; offset <= table.players.length; offset += 1) {
@@ -1070,6 +1134,70 @@ app.post("/server/wallet/deposits/checkout-pro", async (c) => {
   }
 });
 
+app.post("/server/wallet/deposits/reconcile", async (c) => {
+  try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
+    const accessToken = Deno.env.get("MERCADO_PAGO_ACCESS_TOKEN");
+    if (!accessToken) {
+      return c.json({ error: "Mercado Pago access token is not configured" }, 500);
+    }
+
+    const body = await c.req.json();
+    const { userId, email, paymentId } = body;
+
+    if (!userId || !email || !paymentId) {
+      return c.json({ error: "Missing required fields" }, 400);
+    }
+
+    const forbiddenResponse = ensureSameUser(c, auth.user, userId, email);
+    if (forbiddenResponse) {
+      return forbiddenResponse;
+    }
+
+    const paymentResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    const payment = await paymentResponse.json();
+    if (!paymentResponse.ok) {
+      console.log("Mercado Pago reconcile lookup failed:", payment);
+      return c.json({ error: "Failed to verify Mercado Pago payment" }, 502);
+    }
+
+    const result = await approveDepositFromPayment(payment);
+    if (!result.approved) {
+      if (result.reason === "payment_not_approved") {
+        return c.json({
+          approved: false,
+          paymentStatus: result.paymentStatus,
+          wallet: await getWallet(auth.user.id, auth.user.email),
+        });
+      }
+
+      return c.json({ error: "Deposit could not be reconciled" }, 404);
+    }
+
+    if (result.wallet.userId !== auth.user.id) {
+      return c.json({ error: "Forbidden" }, 403);
+    }
+
+    return c.json({
+      approved: true,
+      depositId: result.depositId,
+      wallet: result.wallet,
+    });
+  } catch (error) {
+    console.log("Error reconciling Mercado Pago deposit:", error);
+    return c.json({ error: "Failed to reconcile deposit" }, 500);
+  }
+});
+
 app.post("/server/wallet/mercadopago/webhook", async (c) => {
   try {
     const accessToken = Deno.env.get("MERCADO_PAGO_ACCESS_TOKEN");
@@ -1101,56 +1229,7 @@ app.post("/server/wallet/mercadopago/webhook", async (c) => {
       return c.json({ received: true });
     }
 
-    const depositId = payment.external_reference as string | undefined;
-    if (!depositId) {
-      return c.json({ received: true });
-    }
-
-    const deposit = await kv.get(depositKey(depositId)) as DepositRecord | null;
-    if (!deposit || deposit.status === "approved") {
-      return c.json({ received: true });
-    }
-
-    if (payment.status !== "approved") {
-      return c.json({ received: true });
-    }
-
-    const wallet = await getWallet(deposit.userId, deposit.email);
-    const alreadyRecorded = wallet.transactions.some(
-      (transaction) => transaction.metadata?.depositId === depositId && transaction.status === "approved"
-    );
-
-    if (!alreadyRecorded) {
-      const nextWallet = {
-        ...wallet,
-        balance: wallet.balance + deposit.amount,
-        transactions: sortTransactions(
-          wallet.transactions.map((transaction) =>
-            transaction.id === depositId
-              ? {
-                  ...transaction,
-                  status: "approved" as const,
-                  description: "Carga acreditada por webhook",
-                  metadata: {
-                    ...(transaction.metadata || {}),
-                    depositId,
-                    paymentId: String(paymentId),
-                  },
-                }
-              : transaction
-          )
-        ),
-      };
-
-      await saveWallet(nextWallet);
-    }
-
-    await kv.set(depositKey(depositId), {
-      ...deposit,
-      status: "approved",
-      paymentId: String(paymentId),
-      approvedAt: Date.now(),
-    });
+    await approveDepositFromPayment(payment);
 
     return c.json({ received: true });
   } catch (error) {

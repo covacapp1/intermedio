@@ -6,6 +6,8 @@ import {
   createEmptyWalletSummary,
   type CreateDepositCheckoutPayload,
   type CreateDepositCheckoutResponse,
+  type ReconcileDepositPayload,
+  type ReconcileDepositResponse,
   type CreateWithdrawalPayload,
   type RecordWalletMovementPayload,
   type UpdateWithdrawalStatusPayload,
@@ -909,6 +911,12 @@ export const api = {
     payload: CreateDepositCheckoutPayload
   ): Promise<ApiResponse<CreateDepositCheckoutResponse>> => {
     return apiCallAuthenticated('/wallet/deposits/checkout-pro', 'POST', payload);
+  },
+
+  reconcileDeposit: async (
+    payload: ReconcileDepositPayload
+  ): Promise<ApiResponse<ReconcileDepositResponse>> => {
+    return apiCallAuthenticated('/wallet/deposits/reconcile', 'POST', payload);
   },
 
   createWithdrawal: async (payload: CreateWithdrawalPayload): Promise<ApiResponse<WalletSummary>> => {

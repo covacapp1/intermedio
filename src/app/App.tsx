@@ -279,22 +279,47 @@ function App() {
     const paymentStatus = params.get("payment");
     if (!paymentStatus) return;
 
-    const noticeByStatus: Record<string, string> = {
-      success: "Volviste desde Mercado Pago. Vamos a refrescar tu saldo INT para confirmar la acreditacion.",
-      pending: "El pago quedo pendiente. Apenas Mercado Pago lo confirme por webhook, se acreditan tus INT.",
-      error: "El pago no pudo completarse. Podes intentarlo nuevamente desde el cajero.",
+    const paymentId = params.get("payment_id") || params.get("collection_id");
+
+    const handleMercadoPagoReturn = async () => {
+      const noticeByStatus: Record<string, string> = {
+        success: "Volviste desde Mercado Pago. Vamos a refrescar tu saldo INT para confirmar la acreditacion.",
+        pending: "El pago quedo pendiente. Apenas Mercado Pago lo confirme por webhook, se acreditan tus INT.",
+        error: "El pago no pudo completarse. Podes intentarlo nuevamente desde el cajero.",
+      };
+
+      setCashierNotice(noticeByStatus[paymentStatus] ?? "Estado de pago recibido.");
+      setCurrentView(userData.id ? "cashier" : "login");
+
+      if (userData.id && userData.email) {
+        if (paymentId && (paymentStatus === "success" || paymentStatus === "pending")) {
+          const response = await api.reconcileDeposit({
+            userId: userData.id,
+            email: userData.email,
+            paymentId,
+          });
+
+          if (response.data?.wallet) {
+            applyWalletSummary(response.data.wallet);
+            if (response.data.approved) {
+              setCashierNotice("Pago confirmado. Ya acreditamos tus INT.");
+            } else if (response.data.paymentStatus === "pending") {
+              setCashierNotice("El pago sigue pendiente. Apenas se confirme, se acreditan tus INT.");
+            }
+          } else {
+            await refreshWallet(userData.id, userData.email);
+          }
+        } else {
+          await refreshWallet(userData.id, userData.email);
+        }
+      }
+
+      params.delete("payment");
+      const nextQuery = params.toString();
+      window.history.replaceState({}, "", `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`);
     };
 
-    setCashierNotice(noticeByStatus[paymentStatus] ?? "Estado de pago recibido.");
-    setCurrentView(userData.id ? "cashier" : "login");
-
-    if (userData.id && userData.email) {
-      refreshWallet(userData.id, userData.email);
-    }
-
-    params.delete("payment");
-    const nextQuery = params.toString();
-    window.history.replaceState({}, "", `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`);
+    void handleMercadoPagoReturn();
   }, [userData.id, userData.email]);
 
   useEffect(() => {
