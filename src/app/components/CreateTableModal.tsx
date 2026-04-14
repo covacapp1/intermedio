@@ -2,17 +2,18 @@ import { useState } from "react";
 
 interface CreateTableModalProps {
   onClose: () => void;
-  onCreate: (tableName: string, buyIn: number, maxPlayers: number) => void;
+  onCreate: (tableName: string, buyIn: number, initialStack: number, maxPlayers: number) => void;
 }
 
 export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
   const [tableName, setTableName] = useState("");
   const [buyIn, setBuyIn] = useState(1000);
+  const [initialStack, setInitialStack] = useState(2000);
   const [maxPlayers, setMaxPlayers] = useState(3);
 
   const handleCreate = () => {
     if (tableName.trim()) {
-      onCreate(tableName.trim(), buyIn, maxPlayers);
+      onCreate(tableName.trim(), buyIn, initialStack, maxPlayers);
     } else {
       alert("Por favor, ingresa un nombre para la mesa");
     }
@@ -66,6 +67,20 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
 
           <div>
             <label className="mb-2 block text-sm font-semibold text-[#F5DEB3]">
+              INT con los que ingresas a jugar
+            </label>
+            <input
+              type="number"
+              value={initialStack}
+              onChange={(e) => setInitialStack(Number(e.target.value))}
+              min="100"
+              step="100"
+              className="w-full rounded border-2 border-[#654321] bg-[#D2B48C] px-4 py-3 text-[#3E2723] placeholder-[#8B7355] focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-[#F5DEB3]">
               Cantidad de Jugadores
             </label>
             <select
@@ -84,6 +99,12 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
             </p>
             <p className="mt-1 text-sm text-[#D2B48C]">
               <strong className="text-[#F5DEB3]">Buy-in:</strong> todos los jugadores deben ingresar con {buyIn} INT
+            </p>
+            <p className="mt-1 text-sm text-[#D2B48C]">
+              <strong className="text-[#F5DEB3]">Tu stack inicial:</strong> entraras a jugar con {initialStack} INT
+            </p>
+            <p className="mt-1 text-sm text-[#D2B48C]">
+              <strong className="text-[#F5DEB3]">Descuento total al crear:</strong> {buyIn + initialStack} INT
             </p>
             <p className="mt-1 text-sm text-[#D2B48C]">
               <strong className="text-[#F5DEB3]">Inicio:</strong> Automatico cuando se llena la mesa

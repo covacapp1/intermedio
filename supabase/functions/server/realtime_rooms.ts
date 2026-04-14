@@ -192,9 +192,10 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       const body = await c.req.json();
       const tableName = String(body.tableName || "").trim();
       const buyIn = Number(body.buyIn);
+      const initialStack = Number(body.initialStack);
       const maxPlayers = Number(body.maxPlayers);
 
-      if (!tableName || !buyIn || !maxPlayers) {
+      if (!tableName || !buyIn || !initialStack || !maxPlayers) {
         return c.json({ error: "Missing required fields" }, 400);
       }
 
@@ -227,7 +228,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         seat: 0,
         is_ready: true,
         is_connected: true,
-        balance: buyIn,
+        balance: initialStack,
         bet: -1,
         cards: [],
         third_card: null,
@@ -250,8 +251,14 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
     try {
       const userId = await requireUserId(c.req.header("Authorization"));
       const roomId = c.req.param("roomId");
+      const body = await c.req.json();
+      const stackAmount = Number(body.stackAmount);
       const db = serviceClient();
       const roomState = await loadRoomRows(roomId);
+
+      if (!stackAmount) {
+        return c.json({ error: "Missing required fields" }, 400);
+      }
 
       if (roomState.players.some((player) => player.user_id === userId)) {
         return c.json({ table: mapRoomToGameTable(roomState.room, roomState.players) });
@@ -267,7 +274,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         seat: roomState.players.length,
         is_ready: true,
         is_connected: true,
-        balance: Number(roomState.room.buy_in),
+        balance: stackAmount,
         bet: -1,
         cards: [],
         third_card: null,

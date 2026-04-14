@@ -316,6 +316,7 @@ export const realtimeGame = {
   async createTable(
     tableName: string,
     buyIn: number,
+    initialStack: number,
     maxPlayers: number,
     userId: string
   ): Promise<ApiResponse<{ table: GameTable }>> {
@@ -323,13 +324,14 @@ export const realtimeGame = {
     return authFetch<{ table: GameTable }>("/realtime/rooms", "POST", {
       tableName,
       buyIn,
+      initialStack,
       maxPlayers,
     });
   },
 
-  async joinTable(tableId: string, userId: string): Promise<ApiResponse<{ table: GameTable }>> {
+  async joinTable(tableId: string, userId: string, stackAmount: number): Promise<ApiResponse<{ table: GameTable }>> {
     void userId;
-    return authFetch<{ table: GameTable }>(`/realtime/rooms/${tableId}/join`, "POST");
+    return authFetch<{ table: GameTable }>(`/realtime/rooms/${tableId}/join`, "POST", { stackAmount });
   },
 
   async getTable(tableId: string): Promise<ApiResponse<{ table: GameTable }>> {

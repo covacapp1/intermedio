@@ -768,16 +768,18 @@ function App() {
     alert("Perfil guardado exitosamente");
   };
 
-  const handleCreateTable = async (tableName: string, buyIn: number, maxPlayers: number) => {
-    if (buyIn > userData.balance) {
+  const handleCreateTable = async (tableName: string, buyIn: number, initialStack: number, maxPlayers: number) => {
+    const totalRequired = buyIn + initialStack;
+
+    if (totalRequired > userData.balance) {
       alert("No tienes suficiente saldo para crear esta mesa");
       return;
     }
 
-    const response = await realtimeGame.createTable(tableName, buyIn, maxPlayers, userData.id);
+    const response = await realtimeGame.createTable(tableName, buyIn, initialStack, maxPlayers, userData.id);
 
     if (response.data) {
-      await recordWalletDebit(buyIn, "game_buy_in", `Buy-in de mesa: ${tableName}`);
+      await recordWalletDebit(totalRequired, "game_buy_in", `Ingreso a mesa: ${tableName}`);
       setShowCreateModal(false);
       setCurrentTableId(response.data.table.id);
       setCurrentView("game");
@@ -794,7 +796,7 @@ function App() {
     setPendingJoinTableId(tableId);
   };
 
-  const handleConfirmJoinTable = async () => {
+  const handleConfirmJoinTable = async (stackAmount: number) => {
     if (!pendingJoinTableId) return;
 
     const table = tables.find((item) => item.id === pendingJoinTableId);
@@ -803,16 +805,23 @@ function App() {
       return;
     }
 
-    if (table.buyIn > userData.balance) {
+    const totalRequired = table.buyIn + stackAmount;
+
+    if (stackAmount <= 0) {
+      alert("Debes indicar con cuantos INT quieres ingresar a jugar");
+      return;
+    }
+
+    if (totalRequired > userData.balance) {
       alert("No tienes suficiente saldo para unirte a esta mesa");
       setPendingJoinTableId(null);
       return;
     }
 
-    const response = await realtimeGame.joinTable(table.id, userData.id);
+    const response = await realtimeGame.joinTable(table.id, userData.id, stackAmount);
 
     if (response.data) {
-      await recordWalletDebit(table.buyIn, "game_buy_in", `Buy-in en mesa: ${table.name}`);
+      await recordWalletDebit(totalRequired, "game_buy_in", `Ingreso a mesa: ${table.name}`);
       setPendingJoinTableId(null);
       setCurrentTableId(response.data.table.id);
       setCurrentView("game");

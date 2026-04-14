@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { formatInt } from "../utils/economy";
 
 interface JoinTableModalProps {
@@ -5,7 +6,7 @@ interface JoinTableModalProps {
   tableName: string;
   buyIn: number;
   userBalance: number;
-  onConfirm: () => void;
+  onConfirm: (stackAmount: number) => void;
   onClose: () => void;
 }
 
@@ -17,9 +18,17 @@ export function JoinTableModal({
   onConfirm,
   onClose,
 }: JoinTableModalProps) {
+  const [stackAmount, setStackAmount] = useState(2000);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setStackAmount(Math.max(buyIn, 2000));
+  }, [buyIn, isOpen]);
+
   if (!isOpen) return null;
 
-  const canAfford = userBalance >= buyIn;
+  const totalRequired = buyIn + stackAmount;
+  const canAfford = stackAmount > 0 && userBalance >= totalRequired;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
@@ -43,7 +52,7 @@ export function JoinTableModal({
 
         <div className="space-y-4">
           <div className="rounded border border-[#D4AF37]/30 bg-black/20 p-4">
-            <p className="text-sm text-[#D2B48C]">Monto obligatorio de ingreso</p>
+            <p className="text-sm text-[#D2B48C]">Monto obligatorio que va al pozo</p>
             <p className="mt-1 text-3xl font-bold text-[#FFD700]">{formatInt(buyIn)}</p>
           </div>
 
@@ -52,13 +61,15 @@ export function JoinTableModal({
               INT con los que vas a ingresar
             </label>
             <input
-              type="text"
-              value={formatInt(buyIn)}
-              readOnly
-              className="w-full rounded border-2 border-[#654321] bg-[#D2B48C] px-4 py-3 text-[#3E2723] focus:outline-none"
+              type="number"
+              value={stackAmount}
+              onChange={(e) => setStackAmount(Number(e.target.value))}
+              min="100"
+              step="100"
+              className="w-full rounded border-2 border-[#654321] bg-[#D2B48C] px-4 py-3 text-[#3E2723] focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]"
             />
             <p className="mt-2 text-xs text-[#D2B48C]">
-              Todos los jugadores ingresan con este mismo monto y ese valor se suma al pozo de la mesa.
+              Este monto queda como tu saldo para jugar dentro de la mesa. El buy-in se suma aparte al pozo.
             </p>
           </div>
 
@@ -67,7 +78,10 @@ export function JoinTableModal({
               <strong className="text-[#F5DEB3]">Tu saldo:</strong> {formatInt(userBalance)}
             </p>
             <p className="mt-1">
-              <strong className="text-[#F5DEB3]">Saldo restante:</strong> {formatInt(Math.max(0, userBalance - buyIn))}
+              <strong className="text-[#F5DEB3]">Total a descontar:</strong> {formatInt(totalRequired)}
+            </p>
+            <p className="mt-1">
+              <strong className="text-[#F5DEB3]">Saldo restante:</strong> {formatInt(Math.max(0, userBalance - totalRequired))}
             </p>
           </div>
 
@@ -87,7 +101,7 @@ export function JoinTableModal({
             CANCELAR
           </button>
           <button
-            onClick={onConfirm}
+            onClick={() => onConfirm(stackAmount)}
             disabled={!canAfford}
             className="rounded-lg border-3 border-[#654321] bg-gradient-to-b from-[#D4AF37] to-[#B8941E] py-3 font-bold text-[#3E2723] shadow-lg transition-all hover:from-[#FFD700] hover:to-[#D4AF37] disabled:cursor-not-allowed disabled:opacity-50 active:scale-95"
             style={{ fontFamily: "serif" }}
