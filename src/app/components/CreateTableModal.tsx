@@ -52,7 +52,7 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
 
           <div>
             <label className="mb-2 block text-sm font-semibold text-[#F5DEB3]">
-              Buy-in (Monto de Entrada)
+              Buy-in Obligatorio al Pozo
             </label>
             <input
               type="number"
@@ -81,6 +81,9 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
           <div className="rounded border border-[#D4AF37]/30 bg-black/20 p-3">
             <p className="text-sm text-[#D2B48C]">
               <strong className="text-[#F5DEB3]">Jugadores:</strong> hasta {maxPlayers} por mesa
+            </p>
+            <p className="mt-1 text-sm text-[#D2B48C]">
+              <strong className="text-[#F5DEB3]">Buy-in:</strong> todos los jugadores deben ingresar con {buyIn} INT
             </p>
             <p className="mt-1 text-sm text-[#D2B48C]">
               <strong className="text-[#F5DEB3]">Inicio:</strong> Automatico cuando se llena la mesa

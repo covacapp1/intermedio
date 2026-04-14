@@ -6,6 +6,7 @@ import { Ads } from "./components/Ads";
 import { Profile } from "./components/Profile";
 import { TablesList } from "./components/TablesList";
 import { CreateTableModal } from "./components/CreateTableModal";
+import { JoinTableModal } from "./components/JoinTableModal";
 import { GameTable } from "./components/GameTable";
 import { ControlPanel } from "./components/ControlPanel";
 import { PotModal } from "./components/PotModal";
@@ -77,6 +78,7 @@ function App() {
 
   const [tables, setTables] = useState<TableInfo[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [pendingJoinTableId, setPendingJoinTableId] = useState<string | null>(null);
 
   const [gameMessage, setGameMessage] = useState("");
   const [currentTableId, setCurrentTableId] = useState<string>("");
@@ -789,15 +791,29 @@ function App() {
     const table = tables.find((item) => item.id === tableId);
     if (!table) return;
 
-    if (table.buyIn > userData.balance) {
-      alert("No tienes suficiente saldo para unirte a esta mesa");
+    setPendingJoinTableId(tableId);
+  };
+
+  const handleConfirmJoinTable = async () => {
+    if (!pendingJoinTableId) return;
+
+    const table = tables.find((item) => item.id === pendingJoinTableId);
+    if (!table) {
+      setPendingJoinTableId(null);
       return;
     }
 
-    const response = await realtimeGame.joinTable(tableId, userData.id);
+    if (table.buyIn > userData.balance) {
+      alert("No tienes suficiente saldo para unirte a esta mesa");
+      setPendingJoinTableId(null);
+      return;
+    }
+
+    const response = await realtimeGame.joinTable(table.id, userData.id);
 
     if (response.data) {
       await recordWalletDebit(table.buyIn, "game_buy_in", `Buy-in en mesa: ${table.name}`);
+      setPendingJoinTableId(null);
       setCurrentTableId(response.data.table.id);
       setCurrentView("game");
 
@@ -807,6 +823,7 @@ function App() {
         setGameMessage("Esperando jugadores...");
       }
     } else {
+      setPendingJoinTableId(null);
       alert(`Error al unirse a la mesa: ${response.error}`);
     }
   };
@@ -888,8 +905,32 @@ function App() {
   };
 
   const handleCloseTable = async () => {
+    const playerInTable = gameState.players.find((player) => player.id === userData.id);
+    const refundAmount = Math.max(0, Math.floor(playerInTable?.balance ?? 0));
+
     if (currentTableId) {
-      await realtimeGame.leaveTable(currentTableId, userData.id);
+      const leaveResponse = await realtimeGame.leaveTable(currentTableId, userData.id);
+      if (leaveResponse.error) {
+        alert(`Error al salir de la mesa: ${leaveResponse.error}`);
+        return;
+      }
+    }
+
+    if (refundAmount > 0) {
+      const refundResponse = await api.recordWalletMovement({
+        userId: userData.id,
+        email: userData.email,
+        amount: refundAmount,
+        direction: "credit",
+        kind: "adjustment",
+        description: "Devolucion de saldo restante al salir de la mesa",
+      });
+
+      if (refundResponse.data) {
+        applyWalletSummary(refundResponse.data);
+      } else {
+        await refreshWallet(userData.id, userData.email);
+      }
     }
 
     setShowPotModal(false);
@@ -1007,6 +1048,8 @@ function App() {
   }
 
   if (currentView === "tables") {
+    const pendingJoinTable = tables.find((table) => table.id === pendingJoinTableId) ?? null;
+
     return (
       <>
         <TablesList
@@ -1020,6 +1063,14 @@ function App() {
             onCreate={handleCreateTable}
           />
         )}
+        <JoinTableModal
+          isOpen={Boolean(pendingJoinTable)}
+          tableName={pendingJoinTable?.name ?? ""}
+          buyIn={pendingJoinTable?.buyIn ?? 0}
+          userBalance={userData.balance}
+          onConfirm={handleConfirmJoinTable}
+          onClose={() => setPendingJoinTableId(null)}
+        />
       </>
     );
   }
