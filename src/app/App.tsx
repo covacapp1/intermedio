@@ -102,6 +102,7 @@ function App() {
   const autoAdvancedRoundRef = useRef<number | null>(null);
   const lobbyUnsubscribeRef = useRef<(() => void) | null>(null);
   const gameUnsubscribeRef = useRef<(() => void) | null>(null);
+  const processedMercadoPagoReturnRef = useRef<string | null>(null);
   const isAdmin = userData.email === appConfig.adminEmail;
   const isYourTurn = gameState.players[gameState.currentTurn]?.id === userData.id;
 
@@ -274,12 +275,18 @@ function App() {
 
   useEffect(() => {
     if (!isBrowser) return;
+    if (authLoading) return;
 
     const params = new URLSearchParams(window.location.search);
     const paymentStatus = params.get("payment");
     if (!paymentStatus) return;
 
     const paymentId = params.get("payment_id") || params.get("collection_id");
+    const paymentReturnKey = `${paymentStatus}:${paymentId || "no-payment-id"}:${userData.id || "anonymous"}`;
+
+    if (processedMercadoPagoReturnRef.current === paymentReturnKey) {
+      return;
+    }
 
     const handleMercadoPagoReturn = async () => {
       const noticeByStatus: Record<string, string> = {
@@ -291,36 +298,42 @@ function App() {
       setCashierNotice(noticeByStatus[paymentStatus] ?? "Estado de pago recibido.");
       setCurrentView(userData.id ? "cashier" : "login");
 
-      if (userData.id && userData.email) {
-        if (paymentId && (paymentStatus === "success" || paymentStatus === "pending")) {
-          const response = await api.reconcileDeposit({
-            userId: userData.id,
-            email: userData.email,
-            paymentId,
-          });
+      if (!userData.id || !userData.email) {
+        return;
+      }
 
-          if (response.data?.wallet) {
-            applyWalletSummary(response.data.wallet);
-            if (response.data.approved) {
-              setCashierNotice("Pago confirmado. Ya acreditamos tus INT.");
-            } else if (response.data.paymentStatus === "pending") {
-              setCashierNotice("El pago sigue pendiente. Apenas se confirme, se acreditan tus INT.");
-            }
-          } else {
-            await refreshWallet(userData.id, userData.email);
+      processedMercadoPagoReturnRef.current = paymentReturnKey;
+
+      if (paymentId && (paymentStatus === "success" || paymentStatus === "pending")) {
+        const response = await api.reconcileDeposit({
+          userId: userData.id,
+          email: userData.email,
+          paymentId,
+        });
+
+        if (response.data?.wallet) {
+          applyWalletSummary(response.data.wallet);
+          if (response.data.approved) {
+            setCashierNotice("Pago confirmado. Ya acreditamos tus INT.");
+          } else if (response.data.paymentStatus === "pending") {
+            setCashierNotice("El pago sigue pendiente. Apenas se confirme, se acreditan tus INT.");
           }
         } else {
           await refreshWallet(userData.id, userData.email);
         }
+      } else {
+        await refreshWallet(userData.id, userData.email);
       }
 
       params.delete("payment");
+      params.delete("payment_id");
+      params.delete("collection_id");
       const nextQuery = params.toString();
       window.history.replaceState({}, "", `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`);
     };
 
     void handleMercadoPagoReturn();
-  }, [userData.id, userData.email]);
+  }, [authLoading, userData.id, userData.email]);
 
   useEffect(() => {
     if (currentView === "tables") {
