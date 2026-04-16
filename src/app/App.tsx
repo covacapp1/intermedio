@@ -58,7 +58,7 @@ const emptyUserData: UserData = {
 };
 
 const isBrowser = typeof window !== "undefined";
-const TURN_DURATION_MS = 15000;
+const TURN_DURATION_MS = 20000;
 const getAuthRedirectUrl = () => {
   if (isBrowser) {
     return `${window.location.origin}/`;

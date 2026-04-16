@@ -106,8 +106,14 @@ export function PlayerSeat({
         {player ? (
           <>
             <Card card={player.cards[0]} />
+            {player.thirdCard ? (
+              <Card card={player.thirdCard} />
+            ) : player.bet > 0 ? (
+              <div className="h-8 w-6 xs:h-9 xs:w-7 sm:h-12 sm:w-8 rounded-md border-2 border-dashed border-[#fff3a3]/50 bg-[#1b2a1f]/40 flex items-center justify-center animate-pulse">
+                <span className="text-[#fff3a3]/60 text-lg font-bold">?</span>
+              </div>
+            ) : null}
             <Card card={player.cards[1]} />
-            {player.thirdCard ? <Card card={player.thirdCard} /> : player.bet > 0 ? <Card hidden /> : null}
           </>
         ) : (
           <>
