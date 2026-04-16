@@ -367,7 +367,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       const playerBalance = Number(player.balance);
       const currentPot = Number(room.pot);
       if (betAmount < 0 || betAmount > playerBalance || betAmount > currentPot) {
-        return c.json({ error: "Invalid bet amount" }, 400);
+        return c.json({ error: `Apuesta invalida. Maximo: ${Math.min(playerBalance, currentPot)} (tu balance: ${playerBalance}, pozo: ${currentPot})` }, 400);
       }
 
       let deck = room.deck || [];

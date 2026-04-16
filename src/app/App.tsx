@@ -853,7 +853,7 @@ function App() {
 
   const handlePlayRound = async (bet: number) => {
     const maxBet = getMaxBet();
-    const dynamicMinimumBet = Math.min(50, maxBet);
+    const dynamicMinimumBet = 1;
 
     if (gameState.roundResolved) {
       setGameMessage("Espera a que todos los jugadores terminen.");

@@ -20,7 +20,7 @@ export function ControlPanel({
   message,
 }: ControlPanelProps) {
   const [bet, setBet] = useState("200");
-  const minimumBet = maxBet > 0 ? Math.min(50, maxBet) : 0;
+  const minimumBet = maxBet > 0 ? 1 : 0;
 
   useEffect(() => {
     setBet((currentBet) => {
@@ -45,7 +45,7 @@ export function ControlPanel({
         id="betInput"
         type="number"
         min={minimumBet}
-        step="50"
+        step="1"
         max={maxBet}
         value={bet}
         onFocus={(e) => e.currentTarget.select()}
@@ -73,7 +73,7 @@ export function ControlPanel({
           ? "La ronda termino. Preparando la siguiente..."
           : isYourTurn
           ? maxBet > 0
-            ? `Es tu turno. Puedes apostar entre ${minimumBet} y ${maxBet} INT, segun el pozo disponible. Te quedan ${timeLeftSeconds} segundos.`
+            ? `Es tu turno. Puedes apostar entre ${minimumBet} y ${maxBet} INT (maximo personal o pozo). Te quedan ${timeLeftSeconds} segundos.`
             : `Es tu turno. El pozo ya no permite apostar mas, asi que solo puedes pasar. Te quedan ${timeLeftSeconds} segundos.`
           : "Esperando el turno del jugador activo."}
       </div>
