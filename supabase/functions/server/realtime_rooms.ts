@@ -38,6 +38,8 @@ interface RoomPlayerRow {
   result: string;
   joined_at: string;
   last_seen_at: string;
+  rebuy_deadline: string | null;
+  has_declined_rebuy: boolean;
   profiles?: {
     username: string | null;
     avatar_url: string | null;
@@ -103,7 +105,10 @@ const randomTableCode = (): string => {
 const getNextPendingTurn = (players: RoomPlayerRow[], startIndex: number): number => {
   for (let offset = 1; offset <= players.length; offset += 1) {
     const candidate = (startIndex + offset) % players.length;
-    if (players[candidate].bet < 0) {
+    const player = players[candidate];
+    // Skip players who are waiting for rebuy (balance = 0 and rebuy_deadline is in the future)
+    const isWaitingForRebuy = player.balance === 0 && player.rebuy_deadline && new Date(player.rebuy_deadline) > new Date();
+    if (player.bet < 0 && !isWaitingForRebuy && !player.has_declined_rebuy) {
       return candidate;
     }
   }
@@ -370,6 +375,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       let nextPot = currentPot;
       let result = "Pasa";
       let thirdCard: Card | null = null;
+      let rebuyDeadline: string | null = player.rebuy_deadline || null;
 
       if (betAmount > 0) {
         const [drawnCard, nextDeck] = drawCard(deck);
@@ -385,6 +391,12 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
           nextBalance -= betAmount;
           nextPot += betAmount;
           result = `Pierde ${Math.round(betAmount)} INT`;
+        }
+
+        // If player reaches 0 balance after losing, start rebuy timer
+        if (nextBalance === 0 && !won) {
+          const deadline = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
+          rebuyDeadline = deadline.toISOString();
         }
       }
 
@@ -402,6 +414,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
           third_card: thirdCard,
           result,
           balance: nextBalance,
+          rebuy_deadline: rebuyDeadline,
           last_seen_at: new Date().toISOString(),
         })
         .eq("id", player.id);
@@ -443,13 +456,22 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         return c.json({ error: "Round not resolved yet" }, 400);
       }
 
+      // Check if there are at least 2 active players (balance > 0 and not declined)
+      const activePlayers = sortedPlayers.filter((p) => p.balance > 0 && !p.has_declined_rebuy);
+      if (activePlayers.length < 2) {
+        return c.json({ error: "Not enough active players to continue" }, 400);
+      }
+
       let nextPot = Number(room.pot);
       const playerUpdates = sortedPlayers.map((player) => ({ ...player, balance: Number(player.balance) }));
 
       if (nextPot <= 0) {
-        nextPot = Number(room.buy_in) * playerUpdates.length;
+        nextPot = Number(room.buy_in) * activePlayers.length;
         for (const player of playerUpdates) {
-          player.balance -= Number(room.buy_in);
+          // Only deduct from active players
+          if (player.balance > 0 && !player.has_declined_rebuy) {
+            player.balance -= Number(room.buy_in);
+          }
         }
       }
 
@@ -497,6 +519,82 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
     }
   });
 
+  app.post("/server/realtime/rooms/:roomId/rebuy", async (c) => {
+    try {
+      const userId = await requireUserId(c.req.header("Authorization"));
+      const roomId = c.req.param("roomId");
+      const db = serviceClient();
+      const { room, players } = await loadRoomRows(roomId);
+      const player = players.find((item) => item.user_id === userId);
+
+      if (!player) {
+        return c.json({ error: "Player not in room" }, 404);
+      }
+
+      if (player.balance > 0) {
+        return c.json({ error: "Player already has balance" }, 400);
+      }
+
+      if (!player.rebuy_deadline || new Date(player.rebuy_deadline) < new Date()) {
+        return c.json({ error: "Rebuy deadline expired" }, 400);
+      }
+
+      const rebuyAmount = Number(room.buy_in);
+
+      // Check if user has sufficient balance in wallet
+      const { data: profile } = await db
+        .from("profiles")
+        .select("wallet_balance")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (!profile || Number(profile.wallet_balance) < rebuyAmount) {
+        return c.json({ error: "Insufficient wallet balance" }, 400);
+      }
+
+      // Deduct from wallet
+      const { error: walletError } = await db
+        .from("profiles")
+        .update({
+          wallet_balance: Number(profile.wallet_balance) - rebuyAmount,
+        })
+        .eq("id", userId);
+
+      if (walletError) {
+        return c.json({ error: walletError.message }, 400);
+      }
+
+      // Record wallet movement
+      await db.from("wallet_movements").insert({
+        user_id: userId,
+        amount: rebuyAmount,
+        direction: "debit",
+        kind: "rebuy",
+        description: `Recarga en mesa ${room.code}`,
+      });
+
+      // Add balance to player in room
+      const { error: playerError } = await db
+        .from("room_players")
+        .update({
+          balance: rebuyAmount,
+          rebuy_deadline: null,
+          has_declined_rebuy: false,
+        })
+        .eq("id", player.id);
+
+      if (playerError) {
+        return c.json({ error: playerError.message }, 400);
+      }
+
+      const finalState = await loadRoomRows(roomId);
+      return c.json({ table: mapRoomToGameTable(finalState.room, finalState.players) });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to process rebuy";
+      return c.json({ error: message }, message === "Unauthorized" ? 401 : 500);
+    }
+  });
+
   app.post("/server/realtime/rooms/:roomId/leave", async (c) => {
     try {
       const userId = await requireUserId(c.req.header("Authorization"));
@@ -506,6 +604,16 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       const player = players.find((item) => item.user_id === userId);
 
       if (player) {
+        // If player has active rebuy deadline, mark as declined
+        if (player.rebuy_deadline && player.balance === 0) {
+          await db
+            .from("room_players")
+            .update({
+              has_declined_rebuy: true,
+              rebuy_deadline: null,
+            })
+            .eq("id", player.id);
+        }
         await db.from("room_players").delete().eq("id", player.id);
       }
 
@@ -550,6 +658,32 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       const sortedPlayers = [...players].sort((left, right) => left.seat - right.seat);
       const currentPlayer = sortedPlayers[room.current_turn_seat];
       const startedAt = room.turn_started_at ? new Date(room.turn_started_at).getTime() : 0;
+
+      // Check for expired rebuy deadlines
+      const now = new Date();
+      for (const p of sortedPlayers) {
+        if (p.rebuy_deadline && new Date(p.rebuy_deadline) < now && p.balance === 0) {
+          await db
+            .from("room_players")
+            .update({
+              has_declined_rebuy: true,
+              rebuy_deadline: null,
+            })
+            .eq("id", p.id);
+        }
+      }
+
+      // Check if game should end (only one player with balance > 0)
+      const playersWithBalance = sortedPlayers.filter((p) => p.balance > 0 && !p.has_declined_rebuy);
+      const playersDeclined = sortedPlayers.filter((p) => p.has_declined_rebuy);
+      if (room.status === "playing" && playersWithBalance.length === 1 && playersDeclined.length > 0) {
+        await db
+          .from("rooms")
+          .update({
+            status: "finished",
+          })
+          .eq("id", roomId);
+      }
 
       if (
         room.status === "playing" &&

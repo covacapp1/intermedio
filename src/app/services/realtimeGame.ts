@@ -29,6 +29,8 @@ export interface Player {
   result: string;
   connected: boolean;
   lastSeen: number;
+  rebuyDeadline?: number;
+  hasDeclinedRebuy?: boolean;
 }
 
 export interface GameTable {
@@ -86,6 +88,8 @@ interface RoomPlayerRow {
   result: string;
   joined_at: string;
   last_seen_at: string;
+  rebuy_deadline: string | null;
+  has_declined_rebuy: boolean;
   profiles?: {
     username: string | null;
     avatar_url: string | null;
@@ -243,6 +247,8 @@ const mapRoomToGameTable = (room: RoomRow, players: RoomPlayerRow[]): GameTable 
       result: player.result || "",
       connected: player.is_connected,
       lastSeen: new Date(player.last_seen_at).getTime(),
+      rebuyDeadline: player.rebuy_deadline ? new Date(player.rebuy_deadline).getTime() : undefined,
+      hasDeclinedRebuy: player.has_declined_rebuy,
     })),
 });
 
@@ -355,6 +361,11 @@ export const realtimeGame = {
   async leaveTable(tableId: string, userId: string): Promise<ApiResponse<{ success: boolean }>> {
     void userId;
     return authFetch<{ success: boolean }>(`/realtime/rooms/${tableId}/leave`, "POST");
+  },
+
+  async rebuy(tableId: string, userId: string): Promise<ApiResponse<{ table: GameTable }>> {
+    void userId;
+    return authFetch<{ table: GameTable }>(`/realtime/rooms/${tableId}/rebuy`, "POST");
   },
 
   async heartbeat(tableId: string, userId: string): Promise<ApiResponse<{ success: boolean }>> {

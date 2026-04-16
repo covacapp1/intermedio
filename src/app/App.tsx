@@ -482,10 +482,24 @@ function App() {
         photoUrl: player.photoUrl,
         connected: player.connected,
         lastSeen: player.lastSeen,
+        rebuyDeadline: player.rebuyDeadline,
+        hasDeclinedRebuy: player.hasDeclinedRebuy,
       })),
     };
 
     setGameState(localGameState);
+
+    // Check if user reached 0 balance and show RebuyModal immediately
+    const you = serverTable.players.find((player) => player.id === userData.id);
+    if (you && you.balance === 0 && you.rebuyDeadline && !showRebuyModal) {
+      setShowRebuyModal(true);
+    }
+
+    // Check if user was ejected (rebuy deadline expired)
+    if (you && you.hasDeclinedRebuy && you.balance === 0 && !showPotModal) {
+      setGameMessage("Te quedaste sin tiempo para recargar. Fuiste echado de la mesa.");
+      setShowPotModal(true);
+    }
 
     if (serverTable.status === "waiting") {
       setGameMessage(`Esperando jugadores... ${serverTable.currentPlayers}/${serverTable.maxPlayers}`);
@@ -899,18 +913,30 @@ function App() {
       return;
     }
 
-    const you = gameState.players.find((player) => player.id === userData.id);
-    if (you && you.balance < 50) {
-      setShowRebuyModal(true);
-      return;
-    }
-
     const response = await realtimeGame.nextRound(currentTableId);
 
     if (response.data) {
       setGameMessage(`Iniciando ronda ${response.data.table.round}...`);
     } else {
       alert(`Error al iniciar siguiente ronda: ${response.error}`);
+    }
+  };
+
+  const handleRebuy = async () => {
+    const response = await realtimeGame.rebuy(currentTableId, userData.id);
+
+    if (response.data) {
+      setShowRebuyModal(false);
+      await refreshWallet(userData.id, userData.email);
+      setGameMessage("Recarga exitosa. Continúa jugando.");
+    } else {
+      if (response.error === "Insufficient wallet balance") {
+        alert("No tienes suficiente saldo en tu wallet para recargar. Debes cargar dinero primero.");
+        setShowRebuyModal(false);
+        await handleCloseTable();
+      } else {
+        alert(`Error al recargar: ${response.error}`);
+      }
     }
   };
 
@@ -1146,6 +1172,7 @@ function App() {
           isOpen={showRebuyModal}
           buyInAmount={gameState.initialBuyIn}
           userBalance={userData.balance}
+          rebuyDeadline={gameState.players.find((p) => p.id === userData.id)?.rebuyDeadline}
           onRebuy={handleRebuy}
           onLeave={handleCloseTable}
         />

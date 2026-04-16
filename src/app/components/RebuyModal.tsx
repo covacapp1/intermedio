@@ -1,17 +1,43 @@
 import { formatMoney } from "../utils/deck";
+import { useEffect, useState } from "react";
 
 interface RebuyModalProps {
   isOpen: boolean;
   buyInAmount: number;
   userBalance: number;
+  rebuyDeadline?: number;
   onRebuy: () => void;
   onLeave: () => void;
 }
 
-export function RebuyModal({ isOpen, buyInAmount, userBalance, onRebuy, onLeave }: RebuyModalProps) {
+export function RebuyModal({ isOpen, buyInAmount, userBalance, rebuyDeadline, onRebuy, onLeave }: RebuyModalProps) {
   if (!isOpen) return null;
 
   const canAfford = userBalance >= buyInAmount;
+  const [timeLeft, setTimeLeft] = useState<number>(0);
+
+  useEffect(() => {
+    if (!rebuyDeadline) return;
+
+    const updateCountdown = () => {
+      const now = Date.now();
+      const deadline = rebuyDeadline;
+      const remaining = Math.max(0, Math.ceil((deadline - now) / 1000));
+      setTimeLeft(remaining);
+
+      if (remaining <= 0) {
+        onLeave();
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [rebuyDeadline, onLeave]);
+
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = timeLeft % 60;
 
   return (
     <div
@@ -39,6 +65,16 @@ export function RebuyModal({ isOpen, buyInAmount, userBalance, onRebuy, onLeave 
           <p className="text-[#D2B48C] text-sm sm:text-base">
             Recarga fichas para continuar en la mesa
           </p>
+          {rebuyDeadline && timeLeft > 0 && (
+            <div className="mt-3 text-[#FFD700] font-bold text-lg">
+              Tiempo restante: {minutes}:{seconds.toString().padStart(2, '0')}
+            </div>
+          )}
+          {timeLeft === 0 && (
+            <div className="mt-3 text-red-400 font-bold text-lg">
+              ¡Tiempo agotado!
+            </div>
+          )}
         </div>
 
         <div className="bg-black/30 rounded-lg p-4 mb-6 space-y-2">

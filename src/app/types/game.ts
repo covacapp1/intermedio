@@ -18,6 +18,8 @@ export interface Player {
   photoUrl?: string;
   connected?: boolean;
   lastSeen?: number;
+  rebuyDeadline?: number;
+  hasDeclinedRebuy?: boolean;
 }
 
 export interface GameState {
