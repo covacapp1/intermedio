@@ -420,22 +420,28 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         ),
         room.current_turn_seat
       );
+      console.log(`[BET] Next turn calculation: nextTurn=${nextTurn}, currentTurnSeat=${room.current_turn_seat}`);
 
       console.log(`Updating player: playerId=${player.id}, bet=${betAmount}, balance=${nextBalance}, result=${result}`);
+      const updateData: Record<string, unknown> = {
+        bet: betAmount,
+        third_card: thirdCard,
+        result,
+        balance: nextBalance,
+        last_seen_at: new Date().toISOString(),
+      };
+      // Only add rebuy_deadline if it was set (column may not exist in DB)
+      if (rebuyDeadline) {
+        updateData.rebuy_deadline = rebuyDeadline;
+      }
       const playerUpdateResult = await db
         .from("room_players")
-        .update({
-          bet: betAmount,
-          third_card: thirdCard,
-          result,
-          balance: nextBalance,
-          rebuy_deadline: rebuyDeadline,
-          last_seen_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq("id", player.id);
       console.log(`Player update result:`, playerUpdateResult.error ? playerUpdateResult.error : "Success");
 
-      await db
+      console.log(`[BET] Updating room: roomId=${roomId}, pot=${nextPot}, current_turn_seat=${nextTurn === -1 ? room.current_turn_seat : nextTurn}, round_resolved=${nextTurn === -1}`);
+      const roomUpdateResult = await db
         .from("rooms")
         .update({
           pot: nextPot,
@@ -445,6 +451,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
           round_resolved: nextTurn === -1,
         })
         .eq("id", roomId);
+      console.log(`[BET] Room update result:`, roomUpdateResult.error ? roomUpdateResult.error : "Success");
 
       await db.from("room_moves").insert({
         room_id: roomId,
