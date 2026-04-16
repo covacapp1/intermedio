@@ -1298,4 +1298,63 @@ app.post("/server/wallet/mercadopago/webhook", async (c) => {
   }
 });
 
+// Admin endpoints for managing user INT balances
+app.get("/server/wallet/admin/users", async (c) => {
+  try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
+    const forbiddenResponse = ensureAdmin(c, auth.user);
+    if (forbiddenResponse) {
+      return forbiddenResponse;
+    }
+
+    const wallets = await kv.getByPrefix("wallet:");
+    const users = (wallets as WalletSummary[]).map((wallet) => ({
+      userId: wallet.userId,
+      email: wallet.email,
+      balance: wallet.balance,
+    }));
+
+    return c.json({ users });
+  } catch (error) {
+    console.log("Error fetching admin users:", error);
+    return c.json({ error: "Failed to fetch users" }, 500);
+  }
+});
+
+app.post("/server/wallet/admin/users/:userId/balance", async (c) => {
+  try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
+    const forbiddenResponse = ensureAdmin(c, auth.user);
+    if (forbiddenResponse) {
+      return forbiddenResponse;
+    }
+
+    const targetUserId = c.req.param("userId");
+    const body = await c.req.json();
+    const { balance: newBalance } = body;
+
+    if (typeof newBalance !== "number" || newBalance < 0) {
+      return c.json({ error: "Invalid balance value" }, 400);
+    }
+
+    const wallet = await getWallet(targetUserId, "");
+    wallet.balance = newBalance;
+    wallet.updatedAt = Date.now();
+    await saveWallet(wallet);
+
+    return c.json({ success: true, userId: targetUserId, balance: newBalance });
+  } catch (error) {
+    console.log("Error updating user balance:", error);
+    return c.json({ error: "Failed to update balance" }, 500);
+  }
+});
+
 Deno.serve(app.fetch);

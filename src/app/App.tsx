@@ -12,6 +12,7 @@ import { ControlPanel } from "./components/ControlPanel";
 import { PotModal } from "./components/PotModal";
 import { RebuyModal } from "./components/RebuyModal";
 import { AdminWithdrawals } from "./components/AdminWithdrawals";
+import { AdminIntManager } from "./components/AdminIntManager";
 import { type GameState } from "./types/game";
 import { formatMoney } from "./utils/deck";
 import { api } from "./services/api";
@@ -26,7 +27,7 @@ import {
   type WithdrawalMethod,
 } from "./types/wallet";
 
-type AppView = "login" | "home" | "profile" | "tables" | "cashier" | "ads" | "game" | "admin";
+type AppView = "login" | "home" | "profile" | "tables" | "cashier" | "ads" | "game" | "admin" | "admin-int";
 
 interface UserData {
   id: string;
@@ -72,6 +73,7 @@ function App() {
   const [walletSummary, setWalletSummary] = useState<WalletSummary>(createEmptyWalletSummary("", ""));
   const [cashierNotice, setCashierNotice] = useState("");
   const [adminWithdrawals, setAdminWithdrawals] = useState<AdminWithdrawalItem[]>([]);
+  const [adminUsers, setAdminUsers] = useState<Array<{ userId: string; email: string; balance: number }>>([]);
   const [authLoading, setAuthLoading] = useState(true);
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -212,6 +214,22 @@ function App() {
     const response = await api.getAdminWithdrawals();
     if (response.data) {
       setAdminWithdrawals(response.data.withdrawals);
+    }
+  };
+
+  const refreshAdminUsers = async () => {
+    const response = await api.getAdminUsers();
+    if (response.data) {
+      setAdminUsers(response.data.users);
+    }
+  };
+
+  const handleUpdateUserBalance = async (userId: string, newBalance: number) => {
+    const response = await api.updateUserBalance(userId, newBalance);
+    if (response.data) {
+      await refreshAdminUsers();
+    } else {
+      alert(response.error ?? "No pudimos actualizar el balance");
     }
   };
 
@@ -359,6 +377,12 @@ function App() {
   useEffect(() => {
     if (currentView === "admin" && isAdmin) {
       refreshAdminWithdrawals();
+    }
+  }, [currentView, isAdmin]);
+
+  useEffect(() => {
+    if (currentView === "admin-int" && isAdmin) {
+      refreshAdminUsers();
     }
   }, [currentView, isAdmin]);
 
@@ -644,7 +668,7 @@ function App() {
     setAuthError("");
   };
 
-  const handleNavigate = (view: "profile" | "tables" | "createTable" | "cashier" | "ads" | "admin") => {
+  const handleNavigate = (view: "profile" | "tables" | "createTable" | "cashier" | "ads" | "admin" | "admin-int") => {
     if (view === "tables") {
       setCurrentView("tables");
     } else if (view === "createTable") {
@@ -653,6 +677,10 @@ function App() {
     } else if (view === "admin") {
       if (isAdmin) {
         setCurrentView("admin");
+      }
+    } else if (view === "admin-int") {
+      if (isAdmin) {
+        setCurrentView("admin-int");
       }
     } else {
       setCurrentView(view);
@@ -1077,6 +1105,18 @@ function App() {
         onBack={handleBackToHome}
         onRefresh={refreshAdminWithdrawals}
         onResolve={handleResolveWithdrawal}
+        onNavigateToIntManager={() => handleNavigate("admin-int")}
+      />
+    );
+  }
+
+  if (currentView === "admin-int" && isAdmin) {
+    return (
+      <AdminIntManager
+        users={adminUsers}
+        onBack={handleBackToHome}
+        onRefresh={refreshAdminUsers}
+        onUpdateBalance={handleUpdateUserBalance}
       />
     );
   }

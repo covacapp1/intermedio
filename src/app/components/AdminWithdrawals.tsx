@@ -7,6 +7,7 @@ interface AdminWithdrawalsProps {
   onBack: () => void;
   onRefresh: () => Promise<void>;
   onResolve: (withdrawalId: string, status: "approved" | "rejected", rejectionReason?: string) => Promise<void>;
+  onNavigateToIntManager?: () => void;
 }
 
 const HIGH_VALUE_WITHDRAWAL_INT = 100000;
@@ -22,6 +23,7 @@ export function AdminWithdrawals({
   onBack,
   onRefresh,
   onResolve,
+  onNavigateToIntManager,
 }: AdminWithdrawalsProps) {
   const [busyId, setBusyId] = useState("");
 
@@ -49,12 +51,22 @@ export function AdminWithdrawals({
           >
             Volver
           </button>
-          <button
-            onClick={onRefresh}
-            className="px-4 py-2 bg-[#D4AF37] text-[#3E2723] font-semibold rounded border-2 border-[#654321] hover:bg-[#FFD700] transition-colors"
-          >
-            Actualizar retiros
-          </button>
+          <div className="flex gap-2">
+            {onNavigateToIntManager && (
+              <button
+                onClick={onNavigateToIntManager}
+                className="px-4 py-2 bg-[#4CAF50] text-white font-semibold rounded border-2 border-[#654321] hover:bg-[#45a049] transition-colors"
+              >
+                Gestionar INT
+              </button>
+            )}
+            <button
+              onClick={onRefresh}
+              className="px-4 py-2 bg-[#D4AF37] text-[#3E2723] font-semibold rounded border-2 border-[#654321] hover:bg-[#FFD700] transition-colors"
+            >
+              Actualizar retiros
+            </button>
+          </div>
         </div>
 
         <section

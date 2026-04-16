@@ -950,4 +950,37 @@ export const api = {
       () => localApi.updateWithdrawalStatus(payload)
     );
   },
+
+  // Admin user INT management
+  getAdminUsers: async (): Promise<ApiResponse<{ users: Array<{ userId: string; email: string; balance: number }> }>> => {
+    return withLocalFallback(
+      () => apiCallAuthenticated('/wallet/admin/users'),
+      () => {
+        const wallets = Object.values(walletStorage.read());
+        const users = wallets.map((wallet) => ({
+          userId: wallet.userId,
+          email: wallet.email,
+          balance: wallet.balance,
+        }));
+        return { data: { users } };
+      }
+    );
+  },
+
+  updateUserBalance: async (userId: string, newBalance: number): Promise<ApiResponse<{ success: boolean; userId: string; balance: number }>> => {
+    return withLocalFallback(
+      () => apiCallAuthenticated(`/wallet/admin/users/${encodeURIComponent(userId)}/balance`, 'POST', { balance: newBalance }),
+      () => {
+        const wallets = walletStorage.read();
+        const wallet = wallets[userId];
+        if (!wallet) {
+          return { error: 'User not found' };
+        }
+        wallet.balance = newBalance;
+        wallet.updatedAt = Date.now();
+        walletStorage.save(wallet);
+        return { data: { success: true, userId, balance: newBalance } };
+      }
+    );
+  },
 };
