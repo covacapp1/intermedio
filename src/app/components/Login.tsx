@@ -76,7 +76,7 @@ export function Login({ onLogin, onRegister, isLoading = false, errorMessage = "
           >
             INTERMEDIO
           </h1>
-          <p className="text-[#D2B48C] text-base sm:text-lg">Saloon &amp; Card Game</p>
+          <p className="text-[#D2B48C] text-base sm:text-lg">Card Game</p>
         </div>
 
         <div
