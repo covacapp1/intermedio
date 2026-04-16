@@ -838,6 +838,9 @@ function App() {
   };
 
   const handlePlayRound = async (bet: number) => {
+    const maxBet = getMaxBet();
+    const dynamicMinimumBet = Math.min(50, maxBet);
+
     if (gameState.roundResolved) {
       setGameMessage("Espera a que todos los jugadores terminen.");
       return;
@@ -848,14 +851,33 @@ function App() {
       return;
     }
 
-    if (bet < 50 && bet !== 0) {
-      setGameMessage("La apuesta minima es 50 INT, o usa Pasar.");
+    if (bet < 0) {
+      setGameMessage("La apuesta no puede ser negativa.");
+      return;
+    }
+
+    if (bet !== 0 && maxBet <= 0) {
+      setGameMessage("No queda pozo disponible para apostar. Usa Pasar.");
+      return;
+    }
+
+    if (bet !== 0 && bet < dynamicMinimumBet) {
+      if (dynamicMinimumBet > 0) {
+        setGameMessage(`La apuesta minima disponible ahora es ${formatMoney(dynamicMinimumBet)}, o usa Pasar.`);
+      } else {
+        setGameMessage("No queda pozo disponible para apostar. Usa Pasar.");
+      }
       return;
     }
 
     const you = gameState.players.find((player) => player.id === userData.id);
     if (you && bet > you.balance) {
       setGameMessage(`No puedes apostar mas de tu saldo (${formatMoney(you.balance)}).`);
+      return;
+    }
+
+    if (bet > gameState.pot) {
+      setGameMessage(`No puedes apostar mas que el pozo disponible (${formatMoney(gameState.pot)}).`);
       return;
     }
 
@@ -976,7 +998,7 @@ function App() {
 
   const getMaxBet = (): number => {
     const you = gameState.players.find((player) => player.id === userData.id);
-    return you ? Math.max(0, Math.floor(you.balance)) : 0;
+    return you ? Math.max(0, Math.min(Math.floor(you.balance), Math.floor(gameState.pot))) : 0;
   };
 
   if (authLoading) {

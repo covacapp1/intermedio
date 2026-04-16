@@ -209,7 +209,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
           status: "waiting",
           buy_in: buyIn,
           max_players: maxPlayers,
-          pot: 0,
+          pot: buyIn,
           round: 0,
           current_turn_seat: 0,
           turn_started_at: null,
@@ -285,6 +285,18 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         return c.json({ error: insertError.message }, 400);
       }
 
+      const nextPot = Number(roomState.room.pot) + Number(roomState.room.buy_in);
+      const { error: potError } = await db
+        .from("rooms")
+        .update({
+          pot: nextPot,
+        })
+        .eq("id", roomId);
+
+      if (potError) {
+        return c.json({ error: potError.message }, 400);
+      }
+
       const refreshed = await loadRoomRows(roomId);
       if (refreshed.players.length === refreshed.room.max_players) {
         let deck = refreshed.room.deck || shuffleDeck(createDeck());
@@ -300,7 +312,6 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
           .update({
             status: "playing",
             round: 1,
-            pot: Number(refreshed.room.buy_in) * refreshed.players.length,
             current_turn_seat: 0,
             turn_started_at: new Date().toISOString(),
             deck,
@@ -348,13 +359,15 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         return c.json({ error: "It is not this player's turn" }, 400);
       }
 
-      if (betAmount < 0 || betAmount > Number(player.balance)) {
+      const playerBalance = Number(player.balance);
+      const currentPot = Number(room.pot);
+      if (betAmount < 0 || betAmount > playerBalance || betAmount > currentPot) {
         return c.json({ error: "Invalid bet amount" }, 400);
       }
 
       let deck = room.deck || [];
-      let nextBalance = Number(player.balance);
-      let nextPot = Number(room.pot);
+      let nextBalance = playerBalance;
+      let nextPot = currentPot;
       let result = "Pasa";
       let thirdCard: Card | null = null;
 
@@ -365,10 +378,9 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
 
         const won = evaluateHand(player.cards[0], player.cards[1], drawnCard);
         if (won) {
-          const prize = Math.min(nextPot, betAmount);
-          nextBalance += prize;
-          nextPot -= prize;
-          result = `Gana ${Math.round(prize)} INT`;
+          nextBalance += betAmount;
+          nextPot -= betAmount;
+          result = `Gana ${Math.round(betAmount)} INT`;
         } else {
           nextBalance -= betAmount;
           nextPot += betAmount;

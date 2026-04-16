@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "push": "powershell -ExecutionPolicy Bypass -File .\\scripts\\push.ps1",
+    "deploy:supabase": "powershell -ExecutionPolicy Bypass -File .\\scripts\\deploy-supabase.ps1",
+    "deploy": "powershell -ExecutionPolicy Bypass -File .\\scripts\\deploy.ps1"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

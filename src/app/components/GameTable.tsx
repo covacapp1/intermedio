@@ -33,7 +33,7 @@ export function GameTable({ gameState, timeLeftSeconds }: GameTableProps) {
             Codigo: <strong>{gameState.tableCode}</strong>
           </span>
           <span className="bg-[#13261e]/50 px-3 py-1.5 rounded border border-[#2f4f3f]">
-            Monto inicial: <strong>{formatMoney(gameState.initialBuyIn)}</strong>
+            Aporte obligatorio: <strong>{formatMoney(gameState.initialBuyIn)}</strong>
           </span>
           <span className="bg-[#13261e]/50 px-3 py-1.5 rounded border border-[#2f4f3f]">
             Ronda: <strong>{gameState.round}</strong>
@@ -53,12 +53,15 @@ export function GameTable({ gameState, timeLeftSeconds }: GameTableProps) {
 
           <div className="absolute left-1/2 top-[49%] sm:top-1/2 -translate-x-1/2 -translate-y-1/2 text-center w-full px-3 sm:px-4">
             <div className="bg-black/20 rounded-xl px-3 py-1.5 sm:px-4 sm:py-2 md:px-6 md:py-3 inline-block border-2 border-white/20 mb-1.5 sm:mb-2 md:mb-3">
-              <p className="text-white/70 text-[10px] sm:text-xs md:text-sm mb-1">Pozo</p>
+              <p className="text-white/70 text-[10px] sm:text-xs md:text-sm mb-1">Pozo actual</p>
               <p
                 className="text-white text-xl xs:text-2xl md:text-3xl lg:text-4xl font-bold"
                 style={{ textShadow: "2px 2px 4px rgba(0,0,0,0.5)" }}
               >
                 {formatMoney(gameState.pot)}
+              </p>
+              <p className="mt-1 text-[10px] sm:text-xs text-[#f5deb3]">
+                Aporte obligatorio por jugador: {formatMoney(gameState.initialBuyIn)}
               </p>
             </div>
             <div

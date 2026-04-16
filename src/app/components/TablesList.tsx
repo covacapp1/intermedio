@@ -157,7 +157,7 @@ function TableCard({ table, onJoin }: { table: TableInfo; onJoin: () => void }) 
             <div className="flex items-center gap-2 rounded border border-[#D4AF37]/30 bg-black/20 px-3 py-1.5">
               <DollarSign className="h-4 w-4 text-[#D4AF37]" />
               <div>
-                <p className="text-xs text-[#D2B48C]">Buy-in al pozo</p>
+                <p className="text-xs text-[#D2B48C]">Aporte obligatorio al pozo</p>
                 <p className="text-sm font-bold text-[#F5DEB3]">{formatInt(table.buyIn)}</p>
               </div>
             </div>

@@ -108,10 +108,10 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
               <strong className="text-[#F5DEB3]">Jugadores:</strong> hasta {maxPlayers} por mesa
             </p>
             <p className="mt-1 text-sm text-[#D2B48C]">
-              <strong className="text-[#F5DEB3]">Buy-in:</strong> todos los jugadores deben ingresar con {Number(buyIn) || 0} INT
+              <strong className="text-[#F5DEB3]">Pozo obligatorio:</strong> cada jugador aporta {Number(buyIn) || 0} INT al centro de la mesa
             </p>
             <p className="mt-1 text-sm text-[#D2B48C]">
-              <strong className="text-[#F5DEB3]">Tu stack inicial:</strong> entraras a jugar con {Number(initialStack) || 0} INT
+              <strong className="text-[#F5DEB3]">Tu stack inicial:</strong> entraras a jugar con {Number(initialStack) || 0} INT como saldo personal
             </p>
             <p className="mt-1 text-sm text-[#D2B48C]">
               <strong className="text-[#F5DEB3]">Descuento total al crear:</strong> {(Number(buyIn) || 0) + (Number(initialStack) || 0)} INT

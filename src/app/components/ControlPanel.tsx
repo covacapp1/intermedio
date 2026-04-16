@@ -20,12 +20,13 @@ export function ControlPanel({
   message,
 }: ControlPanelProps) {
   const [bet, setBet] = useState("200");
+  const minimumBet = maxBet > 0 ? Math.min(50, maxBet) : 0;
 
   useEffect(() => {
     setBet((currentBet) => {
       const parsedBet = Number(currentBet);
       if (!Number.isFinite(parsedBet)) {
-        return String(maxBet);
+        return String(maxBet || 0);
       }
       return String(Math.min(parsedBet, maxBet));
     });
@@ -43,7 +44,7 @@ export function ControlPanel({
       <input
         id="betInput"
         type="number"
-        min="50"
+        min={minimumBet}
         step="50"
         max={maxBet}
         value={bet}
@@ -71,7 +72,9 @@ export function ControlPanel({
         {roundResolved
           ? "La ronda termino. Preparando la siguiente..."
           : isYourTurn
-          ? `Es tu turno. Te quedan ${timeLeftSeconds} segundos.`
+          ? maxBet > 0
+            ? `Es tu turno. Puedes apostar entre ${minimumBet} y ${maxBet} INT, segun el pozo disponible. Te quedan ${timeLeftSeconds} segundos.`
+            : `Es tu turno. El pozo ya no permite apostar mas, asi que solo puedes pasar. Te quedan ${timeLeftSeconds} segundos.`
           : "Esperando el turno del jugador activo."}
       </div>
       {message && <p className="text-zinc-400 text-xs sm:text-sm min-h-[1.4rem] mt-1">{message}</p>}

@@ -22,7 +22,7 @@ export function JoinTableModal({
 
   useEffect(() => {
     if (!isOpen) return;
-    setStackAmount(String(Math.max(buyIn, 2000)));
+    setStackAmount("2000");
   }, [buyIn, isOpen]);
 
   if (!isOpen) return null;
@@ -71,7 +71,7 @@ export function JoinTableModal({
               className="w-full rounded border-2 border-[#654321] bg-[#D2B48C] px-4 py-3 text-[#3E2723] focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]"
             />
             <p className="mt-2 text-xs text-[#D2B48C]">
-              Este monto queda como tu saldo para jugar dentro de la mesa. El buy-in se suma aparte al pozo.
+              Este monto queda como tu saldo personal dentro de la mesa. Si te retiras, solo vuelve este saldo sobrante. El aporte obligatorio queda en el pozo.
             </p>
           </div>
 
