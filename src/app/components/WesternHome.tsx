@@ -46,7 +46,7 @@ export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogo
           </div>
           <MenuEntry label="Cajero" onClick={() => onNavigate("cashier")} />
           <MenuEntry label="Anuncios" onClick={() => onNavigate("ads")} />
-          {isAdmin ? <MenuEntry label="Admin Retiros" onClick={() => onNavigate("admin")} /> : null}
+          {isAdmin ? <MenuEntry label="Admin" onClick={() => onNavigate("admin")} /> : null}
           <button
             onClick={() => {
               setMenuOpen(false);
@@ -72,7 +72,7 @@ export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogo
           </h1>
           <div className="flex items-center justify-center gap-3 sm:gap-4">
             <div className="h-1 w-16 sm:w-20 bg-gradient-to-r from-transparent to-[#D4AF37]" />
-            <p className="text-[#D2B48C] text-base sm:text-lg md:text-xl">Saloon & Card Game</p>
+            <p className="text-[#D2B48C] text-base sm:text-lg md:text-xl">Card Game</p>
             <div className="h-1 w-16 sm:w-20 bg-gradient-to-l from-transparent to-[#D4AF37]" />
           </div>
         </div>
