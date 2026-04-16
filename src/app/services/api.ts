@@ -434,11 +434,13 @@ const localApi = {
 
       const won = evaluateHand(player.cards[0], player.cards[1], thirdCard);
       if (won) {
+        // Player wins: gets bet back + same amount from pot
         const prize = Math.min(table.pot, betAmount);
-        player.balance += prize;
+        player.balance += betAmount + prize; // Return bet + win from pot
         table.pot -= prize;
         player.result = `Gana $${prize}`;
       } else {
+        // Player loses: loses bet to pot
         player.balance -= betAmount;
         table.pot += betAmount;
         player.result = `Pierde $${betAmount}`;

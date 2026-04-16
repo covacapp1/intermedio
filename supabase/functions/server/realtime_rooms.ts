@@ -397,10 +397,12 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         const won = evaluateHand(player.cards[0], player.cards[1], drawnCard);
         console.log(`Bet processing: userId=${userId}, betAmount=${betAmount}, won=${won}, balanceBefore=${playerBalance}, potBefore=${currentPot}`);
         if (won) {
-          nextBalance += betAmount;
+          // Player wins: gets bet back + same amount from pot
+          nextBalance += betAmount * 2;
           nextPot -= betAmount;
           result = `Gana ${Math.round(betAmount)} INT`;
         } else {
+          // Player loses: loses bet to pot
           nextBalance -= betAmount;
           nextPot += betAmount;
           result = `Pierde ${Math.round(betAmount)} INT`;
@@ -450,12 +452,15 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       if (nextTurn === -1) {
         roomUpdateData.round_resolved = true;
       }
-      console.log(`[BET] Updating room: roomId=${roomId}, pot=${nextPot}, current_turn_seat=${roomUpdateData.current_turn_seat}, round_resolved=${roomUpdateData.round_resolved}`);
+      console.log(`[BET] Updating room: roomId=${roomId}, potBefore=${currentPot}, potAfter=${nextPot}, current_turn_seat=${roomUpdateData.current_turn_seat}, round_resolved=${roomUpdateData.round_resolved}`);
       const roomUpdateResult = await db
         .from("rooms")
         .update(roomUpdateData)
         .eq("id", roomId);
       console.log(`[BET] Room update result:`, roomUpdateResult.error ? roomUpdateResult.error : "Success");
+      if (roomUpdateResult.error) {
+        console.error(`[BET] Room update failed with data:`, roomUpdateData);
+      }
 
       await db.from("room_moves").insert({
         room_id: roomId,
