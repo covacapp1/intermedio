@@ -99,6 +99,7 @@ function App() {
   const [showPotModal, setShowPotModal] = useState(false);
   const [showRebuyModal, setShowRebuyModal] = useState(false);
   const [timeLeftSeconds, setTimeLeftSeconds] = useState(15);
+  const [isProcessingBet, setIsProcessingBet] = useState(false);
 
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -889,17 +890,7 @@ function App() {
     }
 
     if (!isYourTurn) {
-      setGameMessage("Todavia no es tu turno.");
-      return;
-    }
-
-    if (bet < 0) {
-      setGameMessage("La apuesta no puede ser negativa.");
-      return;
-    }
-
-    if (bet !== 0 && maxBet <= 0) {
-      setGameMessage("No queda pozo disponible para apostar. Usa Pasar.");
+      setGameMessage("No es tu turno.");
       return;
     }
 
@@ -912,20 +903,16 @@ function App() {
       return;
     }
 
-    const you = gameState.players.find((player) => player.id === userData.id);
-    if (you && bet > you.balance) {
-      setGameMessage(`No puedes apostar mas de tu saldo (${formatMoney(you.balance)}).`);
-      return;
-    }
-
     if (bet > gameState.pot) {
       setGameMessage(`No puedes apostar mas que el pozo disponible (${formatMoney(gameState.pot)}).`);
       return;
     }
 
+    setIsProcessingBet(true);
     console.log(`Making bet: tableId=${currentTableId}, bet=${bet}`);
     const response = await realtimeGame.makeBet(currentTableId, userData.id, bet);
     console.log(`Bet response:`, response);
+    setIsProcessingBet(false);
 
     if (response.data?.table) {
       setGameMessage("Apuesta enviada y procesada");
@@ -1189,6 +1176,7 @@ function App() {
               onPlayRound={handlePlayRound}
               onPass={handlePass}
               message={gameMessage}
+              isProcessingBet={isProcessingBet}
             />
           </div>
         </main>

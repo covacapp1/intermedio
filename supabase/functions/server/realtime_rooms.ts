@@ -440,16 +440,20 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         .eq("id", player.id);
       console.log(`Player update result:`, playerUpdateResult.error ? playerUpdateResult.error : "Success");
 
-      console.log(`[BET] Updating room: roomId=${roomId}, pot=${nextPot}, current_turn_seat=${nextTurn === -1 ? room.current_turn_seat : nextTurn}, round_resolved=${nextTurn === -1}`);
+      const roomUpdateData: Record<string, unknown> = {
+        pot: nextPot,
+        deck,
+        current_turn_seat: nextTurn === -1 ? room.current_turn_seat : nextTurn,
+        turn_started_at: nextTurn === -1 ? room.turn_started_at : new Date().toISOString(),
+      };
+      // Only add round_resolved if it might exist in DB
+      if (nextTurn === -1) {
+        roomUpdateData.round_resolved = true;
+      }
+      console.log(`[BET] Updating room: roomId=${roomId}, pot=${nextPot}, current_turn_seat=${roomUpdateData.current_turn_seat}, round_resolved=${roomUpdateData.round_resolved}`);
       const roomUpdateResult = await db
         .from("rooms")
-        .update({
-          pot: nextPot,
-          deck,
-          current_turn_seat: nextTurn === -1 ? room.current_turn_seat : nextTurn,
-          turn_started_at: nextTurn === -1 ? room.turn_started_at : new Date().toISOString(),
-          round_resolved: nextTurn === -1,
-        })
+        .update(roomUpdateData)
         .eq("id", roomId);
       console.log(`[BET] Room update result:`, roomUpdateResult.error ? roomUpdateResult.error : "Success");
 

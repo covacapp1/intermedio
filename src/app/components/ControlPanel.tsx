@@ -8,6 +8,7 @@ interface ControlPanelProps {
   onPlayRound: (bet: number) => void;
   onPass: () => void;
   message: string;
+  isProcessingBet?: boolean;
 }
 
 export function ControlPanel({
@@ -18,6 +19,7 @@ export function ControlPanel({
   onPlayRound,
   onPass,
   message,
+  isProcessingBet = false,
 }: ControlPanelProps) {
   const [bet, setBet] = useState("200");
   const minimumBet = maxBet > 0 ? 1 : 0;
@@ -55,17 +57,17 @@ export function ControlPanel({
       <div className="grid grid-cols-2 gap-2">
         <button
           onClick={handlePlayRound}
-          disabled={roundResolved || !isYourTurn}
+          disabled={roundResolved || !isYourTurn || isProcessingBet}
           className="border-none rounded-lg px-3 py-2.5 sm:py-3 text-sm sm:text-base font-bold cursor-pointer bg-gradient-to-br from-[#d09a2a] to-[#ffd166] text-[#1d1d1d] transition-all hover:translate-y-[-1px] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
         >
-          Jugar mano
+          {isProcessingBet ? "Procesando..." : "Jugar mano"}
         </button>
         <button
           onClick={onPass}
-          disabled={roundResolved || !isYourTurn}
+          disabled={roundResolved || !isYourTurn || isProcessingBet}
           className="border-none rounded-lg px-3 py-2.5 sm:py-3 text-sm sm:text-base font-bold cursor-pointer bg-[#395946] text-white transition-all hover:translate-y-[-1px] hover:brightness-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
         >
-          Pasar
+          {isProcessingBet ? "Procesando..." : "Pasar"}
         </button>
       </div>
       <div className="rounded-lg border border-[#2f4f3f] bg-[#0f1f19] px-3 py-2 text-xs sm:text-sm text-zinc-300">
