@@ -422,24 +422,29 @@ export const realtimeGame = {
 
     const channel = supabase
       .channel(`game:${roomId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "rooms", filter: `id=eq.${roomId}` }, () => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "rooms", filter: `id=eq.${roomId}` }, (payload) => {
+        console.log("Realtime: rooms update", payload);
         void refresh();
       })
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "room_players", filter: `room_id=eq.${roomId}` },
-        () => {
+        (payload) => {
+          console.log("Realtime: room_players update", payload);
           void refresh();
         }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "room_moves", filter: `room_id=eq.${roomId}` },
-        () => {
+        (payload) => {
+          console.log("Realtime: room_moves update", payload);
           void refresh();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`Realtime subscription status for ${roomId}:`, status);
+      });
 
     return () => {
       void supabase.removeChannel(channel);

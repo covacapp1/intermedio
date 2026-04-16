@@ -923,12 +923,17 @@ function App() {
       return;
     }
 
+    console.log(`Making bet: tableId=${currentTableId}, bet=${bet}`);
     const response = await realtimeGame.makeBet(currentTableId, userData.id, bet);
+    console.log(`Bet response:`, response);
 
-    if (response.data) {
-      setGameMessage("Apuesta enviada...");
-    } else {
+    if (response.data?.table) {
+      setGameMessage("Apuesta enviada y procesada");
+    } else if (response.error) {
       alert(`Error al procesar apuesta: ${response.error}`);
+    } else {
+      setGameMessage("Error: Respuesta del servidor incompleta");
+      console.error("Invalid response:", response);
     }
   };
 
