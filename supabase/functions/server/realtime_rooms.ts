@@ -361,6 +361,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       }
 
       if (playerIndex !== room.current_turn_seat) {
+        console.error(`Turn mismatch: playerIndex=${playerIndex}, current_turn_seat=${room.current_turn_seat}, userId=${userId}, playerSeat=${player?.seat}`);
         return c.json({ error: "It is not this player's turn" }, 400);
       }
 
@@ -383,6 +384,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         deck = nextDeck;
 
         const won = evaluateHand(player.cards[0], player.cards[1], drawnCard);
+        console.log(`Bet processing: userId=${userId}, betAmount=${betAmount}, won=${won}, balanceBefore=${playerBalance}, potBefore=${currentPot}`);
         if (won) {
           nextBalance += betAmount;
           nextPot -= betAmount;
@@ -392,6 +394,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
           nextPot += betAmount;
           result = `Pierde ${Math.round(betAmount)} INT`;
         }
+        console.log(`Bet processing: balanceAfter=${nextBalance}, potAfter=${nextPot}`);
 
         // If player reaches 0 balance after losing, start rebuy timer
         if (nextBalance === 0 && !won) {
@@ -407,7 +410,8 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         room.current_turn_seat
       );
 
-      await db
+      console.log(`Updating player: playerId=${player.id}, bet=${betAmount}, balance=${nextBalance}, result=${result}`);
+      const playerUpdateResult = await db
         .from("room_players")
         .update({
           bet: betAmount,
@@ -418,6 +422,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
           last_seen_at: new Date().toISOString(),
         })
         .eq("id", player.id);
+      console.log(`Player update result:`, playerUpdateResult.error ? playerUpdateResult.error : "Success");
 
       await db
         .from("rooms")
@@ -426,6 +431,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
           deck,
           current_turn_seat: nextTurn === -1 ? room.current_turn_seat : nextTurn,
           turn_started_at: nextTurn === -1 ? room.turn_started_at : new Date().toISOString(),
+          round_resolved: nextTurn === -1,
         })
         .eq("id", roomId);
 
