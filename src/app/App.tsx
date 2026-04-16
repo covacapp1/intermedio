@@ -1009,19 +1009,6 @@ function App() {
     setCurrentView("tables");
   };
 
-  const handleRebuy = async () => {
-    if (userData.balance < gameState.initialBuyIn) {
-      alert("No tienes suficiente saldo. Debes cargar dinero primero en el cajero.");
-      setShowRebuyModal(false);
-      handleCloseTable();
-      return;
-    }
-
-    await recordWalletDebit(gameState.initialBuyIn, "rebuy", "Rebuy para seguir jugando");
-    setShowRebuyModal(false);
-    setGameMessage(`Recarga exitosa de ${formatMoney(gameState.initialBuyIn)}. Continuemos jugando.`);
-  };
-
   const getMaxBet = (): number => {
     const you = gameState.players.find((player) => player.id === userData.id);
     return you ? Math.max(0, Math.min(Math.floor(you.balance), Math.floor(gameState.pot))) : 0;
