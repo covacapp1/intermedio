@@ -149,9 +149,11 @@ const authFetch = async <T>(path: string, method: string = "GET", body?: unknown
     }
 
     const data = await response.json();
+    console.log(`Response status: ${response.status}, ok: ${response.ok}, data:`, data);
 
     if (!response.ok) {
-      return { error: data.error || "Request failed" };
+      console.error(`Request failed: ${response.status} - ${data.error || "Unknown error"}`);
+      return { error: data.error || `Request failed with status ${response.status}` };
     }
 
     return { data };

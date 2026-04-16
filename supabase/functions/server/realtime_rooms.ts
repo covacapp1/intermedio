@@ -350,11 +350,22 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       const roomId = c.req.param("roomId");
       const body = await c.req.json();
       const betAmount = Number(body.betAmount);
+      console.log(`[BET] Received: roomId=${roomId}, userId=${userId}, betAmount=${betAmount}`);
+
       const db = serviceClient();
       const { room, players } = await loadRoomRows(roomId);
+      console.log(`[BET] Room loaded: roomExists=${!!room}, roomStatus=${room?.status}, currentTurnSeat=${room?.current_turn_seat}, playersCount=${players?.length}`);
+
+      if (!room) {
+        return c.json({ error: "Room not found" }, 404);
+      }
+
       const sortedPlayers = [...players].sort((left, right) => left.seat - right.seat);
+      console.log(`[BET] Sorted players: ${sortedPlayers.map((p) => `seat=${p.seat},userId=${p.user_id},bet=${p.bet}`).join(" | ")}`);
+
       const playerIndex = sortedPlayers.findIndex((player) => player.user_id === userId);
       const player = sortedPlayers[playerIndex];
+      console.log(`[BET] Player lookup: playerIndex=${playerIndex}, playerExists=${!!player}, playerSeat=${player?.seat}`);
 
       if (!player) {
         return c.json({ error: "Player not in room" }, 404);
