@@ -68,18 +68,13 @@ export function GameTable({
           <div className="absolute inset-x-[10%] inset-y-[14%] xs:inset-x-[9%] xs:inset-y-[13%] sm:inset-x-[9%] sm:inset-y-[12%] md:inset-x-[11%] md:inset-y-[13%] rounded-[50%/38%] bg-gradient-to-br from-[#2d9a68] via-[#1f6b47] to-[#184d35] border-[8px] sm:border-[10px] md:border-[12px] border-[#5f3f1c] shadow-[inset_0_0_0_3px_rgba(255,255,255,0.12),inset_0_-18px_26px_rgba(0,0,0,0.35),0_16px_35px_rgba(0,0,0,0.45)]" />
 
           <div className="absolute left-1/2 top-[49%] sm:top-1/2 -translate-x-1/2 -translate-y-1/2 text-center w-full px-3 sm:px-4">
-            <div className="bg-black/20 rounded-xl px-3 py-1.5 sm:px-4 sm:py-2 md:px-6 md:py-3 inline-block border-2 border-white/20 mb-1.5 sm:mb-2 md:mb-3">
-              <p className="text-white/70 text-[10px] sm:text-xs md:text-sm mb-1">Pozo actual</p>
-              <p
-                className="text-white text-xl xs:text-2xl md:text-3xl lg:text-4xl font-bold"
-                style={{ textShadow: "2px 2px 4px rgba(0,0,0,0.5)" }}
-              >
-                {formatMoney(gameState.pot)}
-              </p>
-              <p className="mt-1 text-[10px] sm:text-xs text-[#f5deb3]">
-                Aporte obligatorio por jugador: {formatMoney(gameState.initialBuyIn)}
-              </p>
-            </div>
+            <p className="text-white/70 text-[10px] sm:text-xs md:text-sm mb-1">Pozo</p>
+            <p
+              className="text-white text-xl xs:text-2xl md:text-3xl lg:text-4xl font-bold mb-1.5 sm:mb-2 md:mb-3"
+              style={{ textShadow: "2px 2px 4px rgba(0,0,0,0.5)" }}
+            >
+              {formatMoney(gameState.pot)}
+            </p>
             <div
               className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold opacity-20 sm:opacity-25"
               style={{
