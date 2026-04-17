@@ -397,8 +397,8 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         const won = evaluateHand(player.cards[0], player.cards[1], drawnCard);
         console.log(`Bet processing: userId=${userId}, betAmount=${betAmount}, won=${won}, balanceBefore=${playerBalance}, potBefore=${currentPot}`);
         if (won) {
-          // Player wins: gets bet back + same amount from pot
-          nextBalance += betAmount * 2;
+          // Player wins: recovers bet (no change) + wins betAmount from pot
+          nextBalance += betAmount;
           nextPot -= betAmount;
           result = `Gana ${Math.round(betAmount)} INT`;
         } else {
