@@ -1166,19 +1166,16 @@ function App() {
           >
             Volver
           </button>
-          <div className="space-y-2.5 sm:space-y-4">
-            <GameTable gameState={gameState} timeLeftSeconds={timeLeftSeconds} />
-            <ControlPanel
-              maxBet={getMaxBet()}
-              roundResolved={gameState.roundResolved}
-              isYourTurn={isYourTurn}
-              timeLeftSeconds={timeLeftSeconds}
-              onPlayRound={handlePlayRound}
-              onPass={handlePass}
-              message={gameMessage}
-              isProcessingBet={isProcessingBet}
-            />
-          </div>
+          <GameTable
+            gameState={gameState}
+            timeLeftSeconds={timeLeftSeconds}
+            maxBet={getMaxBet()}
+            isYourTurn={isYourTurn}
+            onPlayRound={handlePlayRound}
+            onPass={handlePass}
+            message={gameMessage}
+            isProcessingBet={isProcessingBet}
+          />
         </main>
 
         <PotModal

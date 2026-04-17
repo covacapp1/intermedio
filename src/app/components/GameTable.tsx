@@ -1,13 +1,29 @@
 import { type GameState } from "../types/game";
 import { PlayerSeat } from "./PlayerSeat";
+import { ControlPanel } from "./ControlPanel";
 import { formatMoney } from "../utils/deck";
 
 interface GameTableProps {
   gameState: GameState;
   timeLeftSeconds: number;
+  maxBet: number;
+  isYourTurn: boolean;
+  onPlayRound: (bet: number) => void;
+  onPass: () => void;
+  message: string;
+  isProcessingBet?: boolean;
 }
 
-export function GameTable({ gameState, timeLeftSeconds }: GameTableProps) {
+export function GameTable({
+  gameState,
+  timeLeftSeconds,
+  maxBet,
+  isYourTurn,
+  onPlayRound,
+  onPass,
+  message,
+  isProcessingBet = false,
+}: GameTableProps) {
   const threePlayerPositions = ["bottom", "top-left", "top-right"] as const;
   const sixPlayerPositions = ["bottom", "left", "top-left", "top-center", "top-right", "right"] as const;
   const positions = gameState.maxPlayers > 3 ? sixPlayerPositions : threePlayerPositions;
@@ -86,6 +102,20 @@ export function GameTable({ gameState, timeLeftSeconds }: GameTableProps) {
               timeLeftSeconds={seat.player?.id === activePlayer?.id ? timeLeftSeconds : 0}
             />
           ))}
+
+          {/* ControlPanel integrado en la mesa - desktop: derecha, mobile: centrado */}
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 sm:translate-x-0 sm:left-auto sm:right-2 sm:bottom-4 md:bottom-6 md:right-6 z-10 w-[280px] sm:w-auto">
+            <ControlPanel
+              maxBet={maxBet}
+              roundResolved={gameState.roundResolved}
+              isYourTurn={isYourTurn}
+              timeLeftSeconds={timeLeftSeconds}
+              onPlayRound={onPlayRound}
+              onPass={onPass}
+              message={message}
+              isProcessingBet={isProcessingBet}
+            />
+          </div>
         </div>
       </section>
     </div>
