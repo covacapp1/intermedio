@@ -2,7 +2,13 @@ import { useState } from "react";
 
 interface CreateTableModalProps {
   onClose: () => void;
-  onCreate: (tableName: string, buyIn: number, initialStack: number, maxPlayers: number) => void;
+  onCreate: (
+    tableName: string,
+    buyIn: number,
+    initialStack: number,
+    maxPlayers: number,
+    gameMode: "pvp" | "vs_ai"
+  ) => void;
 }
 
 export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
@@ -10,6 +16,7 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
   const [buyIn, setBuyIn] = useState("1000");
   const [initialStack, setInitialStack] = useState("2000");
   const [maxPlayers, setMaxPlayers] = useState(3);
+  const [gameMode, setGameMode] = useState<"pvp" | "vs_ai">("pvp");
 
   const handleCreate = () => {
     const parsedBuyIn = Number(buyIn);
@@ -21,7 +28,7 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
     }
 
     if (tableName.trim()) {
-      onCreate(tableName.trim(), parsedBuyIn, parsedInitialStack, maxPlayers);
+      onCreate(tableName.trim(), parsedBuyIn, parsedInitialStack, gameMode === "vs_ai" ? 2 : maxPlayers, gameMode);
     } else {
       alert("Por favor, ingresa un nombre para la mesa");
     }
@@ -91,11 +98,26 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
 
           <div>
             <label className="mb-2 block text-sm font-semibold text-[#F5DEB3]">
+              Modo de Juego
+            </label>
+            <select
+              value={gameMode}
+              onChange={(e) => setGameMode(e.target.value as "pvp" | "vs_ai")}
+              className="w-full rounded border-2 border-[#654321] bg-[#D2B48C] px-4 py-3 text-[#3E2723] focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]"
+            >
+              <option value="pvp">Multijugador</option>
+              <option value="vs_ai">1 jugador vs IA</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-[#F5DEB3]">
               Cantidad de Jugadores
             </label>
             <select
               value={maxPlayers}
               onChange={(e) => setMaxPlayers(Number(e.target.value))}
+              disabled={gameMode === "vs_ai"}
               className="w-full rounded border-2 border-[#654321] bg-[#D2B48C] px-4 py-3 text-[#3E2723] focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]"
             >
               <option value={3}>3 jugadores</option>
@@ -105,7 +127,10 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
 
           <div className="rounded border border-[#D4AF37]/30 bg-black/20 p-3">
             <p className="text-sm text-[#D2B48C]">
-              <strong className="text-[#F5DEB3]">Jugadores:</strong> hasta {maxPlayers} por mesa
+              <strong className="text-[#F5DEB3]">Modo:</strong> {gameMode === "vs_ai" ? "1 jugador vs IA" : "Multijugador"}
+            </p>
+            <p className="mt-1 text-sm text-[#D2B48C]">
+              <strong className="text-[#F5DEB3]">Jugadores:</strong> hasta {gameMode === "vs_ai" ? 2 : maxPlayers} por mesa
             </p>
             <p className="mt-1 text-sm text-[#D2B48C]">
               <strong className="text-[#F5DEB3]">Pozo obligatorio:</strong> cada jugador aporta {Number(buyIn) || 0} INT al centro de la mesa
@@ -116,8 +141,13 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
             <p className="mt-1 text-sm text-[#D2B48C]">
               <strong className="text-[#F5DEB3]">Descuento total al crear:</strong> {(Number(buyIn) || 0) + (Number(initialStack) || 0)} INT
             </p>
+            {gameMode === "vs_ai" ? (
+              <p className="mt-1 text-sm text-[#D2B48C]">
+                <strong className="text-[#F5DEB3]">IA:</strong> la caja admin aporta su propio fondo para la IA.
+              </p>
+            ) : null}
             <p className="mt-1 text-sm text-[#D2B48C]">
-              <strong className="text-[#F5DEB3]">Inicio:</strong> Automatico cuando se llena la mesa
+              <strong className="text-[#F5DEB3]">Inicio:</strong> {gameMode === "vs_ai" ? "Inmediato" : "Automatico cuando se llena la mesa"}
             </p>
           </div>
         </div>

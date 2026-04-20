@@ -85,6 +85,7 @@ function App() {
   const [gameMessage, setGameMessage] = useState("");
   const [currentTableId, setCurrentTableId] = useState<string>("");
   const [gameState, setGameState] = useState<GameState>({
+    mode: "pvp",
     tableCode: "",
     initialBuyIn: 0,
     maxPlayers: 3,
@@ -486,6 +487,7 @@ function App() {
     if (!serverTable) return;
 
     const localGameState: GameState = {
+      mode: serverTable.mode || "pvp",
       tableCode: serverTable.code,
       initialBuyIn: serverTable.buyIn,
       maxPlayers: serverTable.maxPlayers,
@@ -527,7 +529,11 @@ function App() {
     }
 
     if (serverTable.status === "waiting") {
-      setGameMessage(`Esperando jugadores... ${serverTable.currentPlayers}/${serverTable.maxPlayers}`);
+      if (serverTable.mode === "vs_ai") {
+        setGameMessage("Mesa vs IA lista. Es tu turno para abrir la ronda.");
+      } else {
+        setGameMessage(`Esperando jugadores... ${serverTable.currentPlayers}/${serverTable.maxPlayers}`);
+      }
       return;
     }
 
@@ -811,7 +817,13 @@ function App() {
     alert("Perfil guardado exitosamente");
   };
 
-  const handleCreateTable = async (tableName: string, buyIn: number, initialStack: number, maxPlayers: number) => {
+  const handleCreateTable = async (
+    tableName: string,
+    buyIn: number,
+    initialStack: number,
+    maxPlayers: number,
+    gameMode: "pvp" | "vs_ai"
+  ) => {
     const totalRequired = buyIn + initialStack;
 
     if (totalRequired > userData.balance) {
@@ -819,14 +831,14 @@ function App() {
       return;
     }
 
-    const response = await realtimeGame.createTable(tableName, buyIn, initialStack, maxPlayers, userData.id);
+    const response = await realtimeGame.createTable(tableName, buyIn, initialStack, maxPlayers, userData.id, gameMode);
 
     if (response.data) {
       await recordWalletDebit(totalRequired, "game_buy_in", `Ingreso a mesa: ${tableName}`);
       setShowCreateModal(false);
       setCurrentTableId(response.data.table.id);
       setCurrentView("game");
-      setGameMessage("Esperando jugadores...");
+      setGameMessage(gameMode === "vs_ai" ? "Mesa vs IA creada. Ronda 1 lista." : "Esperando jugadores...");
     } else {
       alert(`Error al crear mesa: ${response.error}`);
     }
@@ -1014,6 +1026,7 @@ function App() {
     setShowRebuyModal(false);
     setCurrentTableId("");
     setGameState({
+      mode: "pvp",
       tableCode: "",
       initialBuyIn: 0,
       maxPlayers: 3,

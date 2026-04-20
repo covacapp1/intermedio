@@ -1,5 +1,6 @@
 import type { Hono } from "npm:hono";
 import { createClient } from "jsr:@supabase/supabase-js@2.49.8";
+import * as kv from "./kv_store.ts";
 
 interface Card {
   suit: string;
@@ -22,6 +23,8 @@ interface RoomRow {
   deck: Card[];
   created_at: string;
   updated_at: string;
+  game_mode?: "pvp" | "vs_ai";
+  ai_state?: AiState | null;
 }
 
 interface RoomPlayerRow {
@@ -46,7 +49,44 @@ interface RoomPlayerRow {
   } | null;
 }
 
+interface AiState {
+  seat: number;
+  name: string;
+  balance: number;
+  bet: number;
+  cards: Card[];
+  thirdCard: Card | null;
+  result: string;
+  strategy: "smart_v1";
+}
+
+type WalletTransactionKind = "deposit" | "withdrawal" | "game_buy_in" | "rebuy" | "adjustment";
+type WalletDirection = "credit" | "debit";
+type WalletTransactionStatus = "pending" | "approved" | "rejected";
+
+interface WalletTransaction {
+  id: string;
+  kind: WalletTransactionKind;
+  direction: WalletDirection;
+  amount: number;
+  status: WalletTransactionStatus;
+  description: string;
+  createdAt: number;
+  metadata?: Record<string, string>;
+}
+
+interface WalletSummary {
+  userId: string;
+  email: string;
+  balance: number;
+  transactions: WalletTransaction[];
+  withdrawals: Array<unknown>;
+  updatedAt: number;
+}
+
 const TURN_DURATION_MS = 20000;
+const DEFAULT_AI_NAME = "Sheriff IA";
+const DEFAULT_ADMIN_EMAIL = "grafica.covac@hotmail.com";
 
 const serviceClient = () =>
   createClient(
@@ -54,6 +94,131 @@ const serviceClient = () =>
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
+
+const walletKey = (userId: string) => `wallet:${userId}`;
+
+const createEmptyWallet = (userId: string, email: string): WalletSummary => ({
+  userId,
+  email,
+  balance: 0,
+  transactions: [],
+  withdrawals: [],
+  updatedAt: Date.now(),
+});
+
+const sortTransactions = (transactions: WalletTransaction[]) =>
+  [...transactions].sort((left, right) => right.createdAt - left.createdAt);
+
+const getWallet = async (userId: string, email: string): Promise<WalletSummary> => {
+  const wallet = await kv.get(walletKey(userId)) as WalletSummary | null;
+  if (wallet) {
+    if (!wallet.email && email) {
+      wallet.email = email;
+      wallet.updatedAt = Date.now();
+      await kv.set(walletKey(userId), wallet);
+    }
+    return wallet;
+  }
+
+  const created = createEmptyWallet(userId, email);
+  await kv.set(walletKey(userId), created);
+  return created;
+};
+
+const saveWallet = async (wallet: WalletSummary): Promise<WalletSummary> => {
+  const next = {
+    ...wallet,
+    transactions: sortTransactions(wallet.transactions || []),
+    updatedAt: Date.now(),
+  };
+  await kv.set(walletKey(wallet.userId), next);
+  return next;
+};
+
+const recordWalletAdjustment = async (
+  userId: string,
+  email: string,
+  amount: number,
+  direction: WalletDirection,
+  description: string,
+  metadata?: Record<string, string>,
+): Promise<WalletSummary> => {
+  const wallet = await getWallet(userId, email);
+  const signed = direction === "debit" ? -amount : amount;
+  const nextBalance = wallet.balance + signed;
+  if (nextBalance < 0) {
+    throw new Error("Insufficient wallet balance");
+  }
+
+  return saveWallet({
+    ...wallet,
+    balance: nextBalance,
+    transactions: [
+      {
+        id: `ai-funds-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        kind: "adjustment",
+        direction,
+        amount,
+        status: "approved",
+        description,
+        createdAt: Date.now(),
+        metadata,
+      },
+      ...(wallet.transactions || []),
+    ],
+  });
+};
+
+const getRoomMode = (room: RoomRow): "pvp" | "vs_ai" => (room.game_mode === "vs_ai" ? "vs_ai" : "pvp");
+
+const buildAiId = (roomId: string) => `ai:${roomId}`;
+
+const calculateWinChance = (card1: Card, card2: Card): number => {
+  const values = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12];
+  const min = Math.min(card1.value, card2.value);
+  const max = Math.max(card1.value, card2.value);
+  const favorable = values.filter((value) => value > min && value < max).length;
+  return favorable / values.length;
+};
+
+const chooseSmartAiBet = (ai: AiState, opponent: RoomPlayerRow | undefined, pot: number): number => {
+  const maxBet = Math.max(0, Math.min(Math.floor(ai.balance), Math.floor(pot)));
+  if (maxBet <= 0 || ai.cards.length < 2) {
+    return 0;
+  }
+
+  const chance = calculateWinChance(ai.cards[0], ai.cards[1]);
+  if (chance <= 0.12) {
+    return 0;
+  }
+
+  let aggression = 0.2;
+  if (chance >= 0.35) aggression = 0.4;
+  if (chance >= 0.55) aggression = 0.65;
+  if (chance >= 0.75) aggression = 0.82;
+
+  if (opponent) {
+    const opponentBalance = Math.max(0, Number(opponent.balance));
+    if (opponentBalance < ai.balance * 0.5) {
+      aggression += 0.07;
+    }
+  }
+
+  const base = Math.floor(maxBet * Math.min(0.9, aggression));
+  if (base <= 0) {
+    return chance > 0.65 ? 1 : 0;
+  }
+
+  if (chance < 0.3 && Math.random() < 0.45) {
+    return 0;
+  }
+
+  return Math.max(1, Math.min(maxBet, base));
+};
+
+const isAiSeat = (room: RoomRow, seat: number): boolean => {
+  return getRoomMode(room) === "vs_ai" && !!room.ai_state && room.ai_state.seat === seat;
+};
 
 const createDeck = (): Card[] => {
   const suits = ["oros", "copas", "espadas", "bastos"];
@@ -164,26 +329,11 @@ const loadRoomRows = async (roomId: string) => {
 };
 
 const mapRoomToGameTable = (room: RoomRow, players: RoomPlayerRow[]) => {
+  const mode = getRoomMode(room);
+  const aiState = mode === "vs_ai" ? room.ai_state : null;
   const sortedPlayers = [...players].sort((left, right) => left.seat - right.seat);
-  const currentTurnIndex = sortedPlayers.findIndex((player) => player.seat === room.current_turn_seat);
-
-  return {
-  id: room.id,
-  name: room.name || `Mesa ${room.code}`,
-  code: room.code,
-  buyIn: Number(room.buy_in),
-  maxPlayers: room.max_players,
-  currentPlayers: players.length,
-  pot: Number(room.pot),
-  deck: room.deck || [],
-  round: room.round,
-  roundResolved: players.length > 0 && players.every((player) => player.bet >= 0),
-  currentTurn: currentTurnIndex >= 0 ? currentTurnIndex : 0,
-  turnStartedAt: room.turn_started_at ? new Date(room.turn_started_at).getTime() : 0,
-  status: room.status,
-  createdAt: new Date(room.created_at).getTime(),
-  lastActivity: new Date(room.updated_at).getTime(),
-  players: sortedPlayers.map((player) => ({
+  const combinedPlayers = [
+    ...sortedPlayers.map((player) => ({
       id: player.user_id,
       name: player.profiles?.username || "Jugador",
       photoUrl: player.profiles?.avatar_url || "",
@@ -196,6 +346,52 @@ const mapRoomToGameTable = (room: RoomRow, players: RoomPlayerRow[]) => {
       connected: player.is_connected,
       lastSeen: new Date(player.last_seen_at).getTime(),
     })),
+    ...(aiState
+      ? [
+          {
+            id: buildAiId(room.id),
+            name: aiState.name || DEFAULT_AI_NAME,
+            photoUrl: "",
+            isAI: true,
+            balance: Number(aiState.balance),
+            bet: Number(aiState.bet),
+            cards: aiState.cards || [],
+            thirdCard: aiState.thirdCard || null,
+            result: aiState.result || "",
+            connected: true,
+            lastSeen: Date.now(),
+          },
+        ]
+      : []),
+  ];
+
+  const currentTurnIndex = combinedPlayers.findIndex((player) => {
+    if (player.isAI) {
+      return room.current_turn_seat === (aiState?.seat ?? -1);
+    }
+    const realPlayer = sortedPlayers.find((row) => row.user_id === player.id);
+    return realPlayer?.seat === room.current_turn_seat;
+  });
+  const roundResolved = combinedPlayers.length > 0 && combinedPlayers.every((player) => player.bet >= 0);
+
+  return {
+  mode,
+  id: room.id,
+  name: room.name || `Mesa ${room.code}`,
+  code: room.code,
+  buyIn: Number(room.buy_in),
+  maxPlayers: room.max_players,
+  currentPlayers: players.length,
+  pot: Number(room.pot),
+  deck: room.deck || [],
+  round: room.round,
+  roundResolved,
+  currentTurn: currentTurnIndex >= 0 ? currentTurnIndex : 0,
+  turnStartedAt: room.turn_started_at ? new Date(room.turn_started_at).getTime() : 0,
+  status: room.status,
+  createdAt: new Date(room.created_at).getTime(),
+  lastActivity: new Date(room.updated_at).getTime(),
+  players: combinedPlayers,
   };
 };
 
@@ -222,26 +418,65 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       const buyIn = Number(body.buyIn);
       const initialStack = Number(body.initialStack);
       const maxPlayers = Number(body.maxPlayers);
+      const gameMode = body.gameMode === "vs_ai" ? "vs_ai" : "pvp";
+      const aiInitialStack = Number(body.aiInitialStack || initialStack);
 
       if (!tableName || !buyIn || !initialStack || !maxPlayers) {
         return c.json({ error: "Missing required fields" }, 400);
       }
 
       const db = serviceClient();
+      const { data: ownerProfile } = await db
+        .from("profiles")
+        .select("email")
+        .eq("id", userId)
+        .maybeSingle();
+      const ownerEmail = String(ownerProfile?.email || "").trim().toLowerCase();
+      const adminEmail = String(Deno.env.get("ADMIN_EMAIL") || DEFAULT_ADMIN_EMAIL).trim().toLowerCase();
+
+      if (gameMode === "vs_ai") {
+        if (!ownerEmail || ownerEmail !== adminEmail) {
+          return c.json({ error: "Solo el admin puede crear mesas vs IA." }, 403);
+        }
+        const aiFunding = buyIn + aiInitialStack;
+        await recordWalletAdjustment(
+          userId,
+          ownerEmail,
+          aiFunding,
+          "debit",
+          `Fondeo IA para mesa ${tableName}`,
+          { source: "vs_ai", tableName }
+        );
+      }
+
       const { data: room, error: roomError } = await db
         .from("rooms")
         .insert({
           name: tableName,
           code: randomTableCode(),
           owner_id: userId,
-          status: "waiting",
+          status: gameMode === "vs_ai" ? "playing" : "waiting",
           buy_in: buyIn,
-          max_players: maxPlayers,
-          pot: buyIn,
-          round: 0,
+          max_players: gameMode === "vs_ai" ? 2 : maxPlayers,
+          pot: gameMode === "vs_ai" ? buyIn * 2 : buyIn,
+          round: gameMode === "vs_ai" ? 1 : 0,
           current_turn_seat: 0,
-          turn_started_at: null,
+          turn_started_at: gameMode === "vs_ai" ? new Date().toISOString() : null,
           deck: shuffleDeck(createDeck()),
+          game_mode: gameMode,
+          ai_state:
+            gameMode === "vs_ai"
+              ? {
+                  seat: 1,
+                  name: DEFAULT_AI_NAME,
+                  balance: aiInitialStack,
+                  bet: -1,
+                  cards: [],
+                  thirdCard: null,
+                  result: "",
+                  strategy: "smart_v1",
+                }
+              : null,
         })
         .select("*")
         .single();
@@ -267,10 +502,48 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         return c.json({ error: playerError.message }, 400);
       }
 
+      if (gameMode === "vs_ai") {
+        const [firstCard, deckAfterFirst] = drawCard(room.deck || []);
+        const [secondCard, deckAfterSecond] = drawCard(deckAfterFirst);
+        const [aiCard1, deckAfterThird] = drawCard(deckAfterSecond);
+        const [aiCard2, finalDeck] = drawCard(deckAfterThird);
+
+        await db
+          .from("room_players")
+          .update({
+            cards: [firstCard, secondCard],
+            third_card: null,
+            bet: -1,
+            result: "",
+          })
+          .eq("room_id", room.id)
+          .eq("user_id", userId);
+
+        await db
+          .from("rooms")
+          .update({
+            deck: finalDeck,
+            ai_state: {
+              seat: 1,
+              name: DEFAULT_AI_NAME,
+              balance: aiInitialStack,
+              bet: -1,
+              cards: [aiCard1, aiCard2],
+              thirdCard: null,
+              result: "",
+              strategy: "smart_v1",
+            },
+          })
+          .eq("id", room.id);
+      }
+
       const roomState = await loadRoomRows(room.id);
       return c.json({ table: mapRoomToGameTable(roomState.room, roomState.players) });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to create room";
+      if (message === "Insufficient wallet balance") {
+        return c.json({ error: "No tienes saldo suficiente en la caja admin para fondear la IA." }, 400);
+      }
       return c.json({ error: message }, message === "Unauthorized" ? 401 : 500);
     }
   });
@@ -283,6 +556,9 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       const stackAmount = Number(body.stackAmount);
       const db = serviceClient();
       const roomState = await loadRoomRows(roomId);
+      if (getRoomMode(roomState.room) === "vs_ai") {
+        return c.json({ error: "Esta mesa es privada (vs IA)." }, 400);
+      }
 
       if (!stackAmount) {
         return c.json({ error: "Missing required fields" }, 400);
@@ -401,6 +677,10 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         return c.json({ error: "Player not in room" }, 404);
       }
 
+      if (isAiSeat(room, room.current_turn_seat)) {
+        return c.json({ error: "Turno de la IA. Espera un momento." }, 400);
+      }
+
       if (player.seat !== room.current_turn_seat) {
         console.error(`Turn mismatch: playerSeat=${player.seat}, current_turn_seat=${room.current_turn_seat}, userId=${userId}`);
         return c.json({ error: "It is not this player's turn" }, 400);
@@ -446,13 +726,84 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         }
       }
 
-      const nextTurn = getNextPendingTurn(
+      let nextTurn = getNextPendingTurn(
         sortedPlayers.map((currentPlayer) =>
           currentPlayer.id === player.id ? { ...currentPlayer, bet: betAmount } : currentPlayer
         ),
         room.current_turn_seat
       );
       console.log(`[BET] Next turn calculation: nextTurn=${nextTurn}, currentTurnSeat=${room.current_turn_seat}`);
+
+      let nextAiState = room.ai_state ? { ...room.ai_state } : null;
+      let nextDeckForRoom = deck;
+      let nextPotForRoom = nextPot;
+      let nextTurnStartedAt = nextTurn === -1 ? room.turn_started_at : new Date().toISOString();
+
+      if (getRoomMode(room) === "vs_ai" && nextAiState && nextTurn === nextAiState.seat && nextAiState.bet < 0) {
+        const aiBet = chooseSmartAiBet(nextAiState, player, nextPotForRoom);
+        let aiResult = "Pasa";
+        let aiThirdCard: Card | null = null;
+        let aiBalance = Number(nextAiState.balance);
+
+        if (aiBet > 0) {
+          const [drawnCard, nextDeck] = drawCard(nextDeckForRoom);
+          aiThirdCard = drawnCard;
+          nextDeckForRoom = nextDeck;
+
+          const aiWon = evaluateHand(nextAiState.cards[0], nextAiState.cards[1], drawnCard);
+          if (aiWon) {
+            aiBalance += aiBet;
+            nextPotForRoom -= aiBet;
+            aiResult = `Gana ${Math.round(aiBet)} INT`;
+          } else {
+            aiBalance -= aiBet;
+            nextPotForRoom += aiBet;
+            aiResult = `Pierde ${Math.round(aiBet)} INT`;
+          }
+        }
+
+        nextAiState = {
+          ...nextAiState,
+          bet: aiBet,
+          thirdCard: aiThirdCard,
+          balance: aiBalance,
+          result: aiResult,
+        };
+
+        await db.from("room_moves").insert({
+          room_id: roomId,
+          user_id: player.user_id,
+          move_type: aiBet > 0 ? "ai_bet" : "ai_pass",
+          payload: { betAmount: aiBet },
+        });
+
+        nextTurn = getNextPendingTurn(
+          [
+            ...sortedPlayers.map((currentPlayer) =>
+              currentPlayer.id === player.id ? { ...currentPlayer, bet: betAmount } : currentPlayer
+            ),
+            {
+              id: `ai-state-${roomId}`,
+              room_id: roomId,
+              user_id: buildAiId(roomId),
+              seat: nextAiState.seat,
+              is_ready: true,
+              is_connected: true,
+              balance: nextAiState.balance,
+              bet: nextAiState.bet,
+              cards: nextAiState.cards,
+              third_card: nextAiState.thirdCard,
+              result: nextAiState.result,
+              joined_at: new Date().toISOString(),
+              last_seen_at: new Date().toISOString(),
+              rebuy_deadline: null,
+              has_declined_rebuy: false,
+            } as RoomPlayerRow,
+          ],
+          nextAiState.seat
+        );
+        nextTurnStartedAt = nextTurn === -1 ? room.turn_started_at : new Date().toISOString();
+      }
 
       console.log(`Updating player: playerId=${player.id}, bet=${betAmount}, balance=${nextBalance}, result=${result}`);
       const updateData: Record<string, unknown> = {
@@ -473,12 +824,13 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       console.log(`Player update result:`, playerUpdateResult.error ? playerUpdateResult.error : "Success");
 
       const roomUpdateData: Record<string, unknown> = {
-        pot: nextPot,
-        deck,
+        pot: nextPotForRoom,
+        deck: nextDeckForRoom,
         current_turn_seat: nextTurn === -1 ? room.current_turn_seat : nextTurn,
-        turn_started_at: nextTurn === -1 ? room.turn_started_at : new Date().toISOString(),
+        turn_started_at: nextTurnStartedAt,
+        ai_state: nextAiState,
       };
-      console.log(`[BET] Updating room: roomId=${roomId}, potBefore=${currentPot}, potAfter=${nextPot}, current_turn_seat=${roomUpdateData.current_turn_seat}`);
+      console.log(`[BET] Updating room: roomId=${roomId}, potBefore=${currentPot}, potAfter=${nextPotForRoom}, current_turn_seat=${roomUpdateData.current_turn_seat}`);
       const roomUpdateResult = await db
         .from("rooms")
         .update(roomUpdateData)
@@ -510,33 +862,43 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       const db = serviceClient();
       const { room, players } = await loadRoomRows(roomId);
       const sortedPlayers = [...players].sort((left, right) => left.seat - right.seat);
+      const mode = getRoomMode(room);
+      const aiState = mode === "vs_ai" ? room.ai_state : null;
 
-      if (sortedPlayers.some((player) => player.bet < 0)) {
+      if (sortedPlayers.some((player) => player.bet < 0) || (aiState ? Number(aiState.bet) < 0 : false)) {
         return c.json({ error: "Round not resolved yet" }, 400);
       }
 
       // Check if there are at least 2 active players (balance > 0 and not declined)
       const activePlayers = sortedPlayers.filter((p) => p.balance > 0 && !p.has_declined_rebuy);
-      if (activePlayers.length < 2) {
+      const aiIsActive = !!aiState && aiState.balance > 0;
+      const totalActivePlayers = activePlayers.length + (aiIsActive ? 1 : 0);
+      if (totalActivePlayers < 2) {
         return c.json({ error: "Not enough active players to continue" }, 400);
       }
 
       let nextPot = Number(room.pot);
       const playerUpdates = sortedPlayers.map((player) => ({ ...player, balance: Number(player.balance) }));
+      let nextAiState = aiState ? { ...aiState, balance: Number(aiState.balance) } : null;
 
       if (nextPot <= 0) {
-        nextPot = Number(room.buy_in) * activePlayers.length;
+        nextPot = Number(room.buy_in) * totalActivePlayers;
         for (const player of playerUpdates) {
           // Only deduct from active players
           if (player.balance > 0 && !player.has_declined_rebuy) {
             player.balance -= Number(room.buy_in);
           }
         }
+        if (nextAiState && nextAiState.balance > 0) {
+          nextAiState.balance -= Number(room.buy_in);
+        }
       }
 
       const firstActiveSeat =
-        [...activePlayers].sort((left, right) => left.seat - right.seat)[0]?.seat ??
-        sortedPlayers[0]?.seat ??
+        mode === "vs_ai"
+          ? sortedPlayers[0]?.seat ?? 0
+          : [...activePlayers].sort((left, right) => left.seat - right.seat)[0]?.seat ??
+            sortedPlayers[0]?.seat ??
         0;
 
       let deck = room.deck && room.deck.length >= playerUpdates.length * 3 ? room.deck : shuffleDeck(createDeck());
@@ -549,6 +911,15 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         player.bet = -1;
         player.result = "";
       }
+      if (nextAiState) {
+        const [card1, deck1] = drawCard(deck);
+        const [card2, deck2] = drawCard(deck1);
+        deck = deck2;
+        nextAiState.cards = [card1, card2];
+        nextAiState.thirdCard = null;
+        nextAiState.bet = -1;
+        nextAiState.result = "";
+      }
 
       await db
         .from("rooms")
@@ -558,6 +929,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
           turn_started_at: new Date().toISOString(),
           pot: nextPot,
           deck,
+          ai_state: nextAiState,
           status: "playing",
         })
         .eq("id", roomId);
@@ -664,7 +1036,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       const userId = await requireUserId(c.req.header("Authorization"));
       const roomId = c.req.param("roomId");
       const db = serviceClient();
-      const { players } = await loadRoomRows(roomId);
+      const { room, players } = await loadRoomRows(roomId);
       const player = players.find((item) => item.user_id === userId);
 
       if (player) {
@@ -679,6 +1051,23 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
             .eq("id", player.id);
         }
         await db.from("room_players").delete().eq("id", player.id);
+      }
+
+      if (getRoomMode(room) === "vs_ai" && room.ai_state && Number(room.ai_state.balance) > 0 && room.owner_id) {
+        const { data: ownerProfile } = await db
+          .from("profiles")
+          .select("email")
+          .eq("id", room.owner_id)
+          .maybeSingle();
+        const ownerEmail = String(ownerProfile?.email || "").trim().toLowerCase();
+        await recordWalletAdjustment(
+          room.owner_id,
+          ownerEmail,
+          Number(room.ai_state.balance),
+          "credit",
+          `Devolucion de saldo IA mesa ${room.code}`,
+          { source: "vs_ai", roomId }
+        );
       }
 
       try {
@@ -721,6 +1110,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
 
       const sortedPlayers = [...players].sort((left, right) => left.seat - right.seat);
       const currentPlayer = sortedPlayers.find((player) => player.seat === room.current_turn_seat);
+      const aiState = getRoomMode(room) === "vs_ai" ? room.ai_state : null;
       const startedAt = room.turn_started_at ? new Date(room.turn_started_at).getTime() : 0;
 
       // Check for expired rebuy deadlines
@@ -739,6 +1129,25 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
 
       // Check if game should end (only one player with balance > 0)
       const playersWithBalance = sortedPlayers.filter((p) => p.balance > 0 && !p.has_declined_rebuy);
+      if (aiState && Number(aiState.balance) > 0) {
+        playersWithBalance.push({
+          id: `ai-balance-${roomId}`,
+          room_id: roomId,
+          user_id: buildAiId(roomId),
+          seat: aiState.seat,
+          is_ready: true,
+          is_connected: true,
+          balance: aiState.balance,
+          bet: aiState.bet,
+          cards: aiState.cards,
+          third_card: aiState.thirdCard,
+          result: aiState.result,
+          joined_at: new Date().toISOString(),
+          last_seen_at: new Date().toISOString(),
+          rebuy_deadline: null,
+          has_declined_rebuy: false,
+        } as RoomPlayerRow);
+      }
       const playersDeclined = sortedPlayers.filter((p) => p.has_declined_rebuy);
       if (room.status === "playing" && playersWithBalance.length === 1 && playersDeclined.length > 0) {
         await db
@@ -785,6 +1194,89 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
           user_id: currentPlayer.user_id,
           move_type: "timeout_pass",
           payload: {},
+        });
+      }
+
+      if (
+        room.status === "playing" &&
+        aiState &&
+        room.current_turn_seat === aiState.seat &&
+        Number(aiState.bet) < 0 &&
+        startedAt > 0 &&
+        Date.now() - startedAt >= 1200
+      ) {
+        const human = sortedPlayers[0];
+        const aiBet = chooseSmartAiBet(aiState, human, Number(room.pot));
+        let nextPot = Number(room.pot);
+        let deck = room.deck || [];
+        let result = "Pasa";
+        let thirdCard: Card | null = null;
+        let nextBalance = Number(aiState.balance);
+
+        if (aiBet > 0) {
+          const [drawnCard, nextDeck] = drawCard(deck);
+          deck = nextDeck;
+          thirdCard = drawnCard;
+          const won = evaluateHand(aiState.cards[0], aiState.cards[1], drawnCard);
+          if (won) {
+            nextBalance += aiBet;
+            nextPot -= aiBet;
+            result = `Gana ${Math.round(aiBet)} INT`;
+          } else {
+            nextBalance -= aiBet;
+            nextPot += aiBet;
+            result = `Pierde ${Math.round(aiBet)} INT`;
+          }
+        }
+
+        const updatedAiState: AiState = {
+          ...aiState,
+          bet: aiBet,
+          thirdCard,
+          result,
+          balance: nextBalance,
+        };
+
+        const nextTurn = getNextPendingTurn(
+          [
+            ...sortedPlayers,
+            {
+              id: `ai-heartbeat-${roomId}`,
+              room_id: roomId,
+              user_id: buildAiId(roomId),
+              seat: aiState.seat,
+              is_ready: true,
+              is_connected: true,
+              balance: nextBalance,
+              bet: aiBet,
+              cards: aiState.cards,
+              third_card: thirdCard,
+              result,
+              joined_at: new Date().toISOString(),
+              last_seen_at: new Date().toISOString(),
+              rebuy_deadline: null,
+              has_declined_rebuy: false,
+            } as RoomPlayerRow,
+          ],
+          aiState.seat
+        );
+
+        await db
+          .from("rooms")
+          .update({
+            ai_state: updatedAiState,
+            pot: nextPot,
+            deck,
+            current_turn_seat: nextTurn === -1 ? room.current_turn_seat : nextTurn,
+            turn_started_at: nextTurn === -1 ? room.turn_started_at : new Date().toISOString(),
+          })
+          .eq("id", roomId);
+
+        await db.from("room_moves").insert({
+          room_id: roomId,
+          user_id: userId,
+          move_type: aiBet > 0 ? "ai_bet" : "ai_pass",
+          payload: { betAmount: aiBet },
         });
       }
 

@@ -34,6 +34,7 @@ export interface Player {
 }
 
 export interface GameTable {
+  mode?: "pvp" | "vs_ai";
   id: string;
   name: string;
   code: string;
@@ -72,6 +73,16 @@ interface RoomRow {
   created_at: string;
   updated_at: string;
   name?: string;
+  game_mode?: "pvp" | "vs_ai";
+  ai_state?: {
+    seat: number;
+    name: string;
+    balance: number;
+    bet: number;
+    cards: Card[];
+    thirdCard: Card | null;
+    result: string;
+  } | null;
 }
 
 interface RoomPlayerRow {
@@ -224,6 +235,7 @@ const mapRoomToGameTable = (room: RoomRow, players: RoomPlayerRow[]): GameTable 
   const currentTurnIndex = sortedPlayers.findIndex((player) => player.seat === room.current_turn_seat);
 
   return {
+  mode: room.game_mode === "vs_ai" ? "vs_ai" : "pvp",
   id: room.id,
   name: room.name || `Mesa ${room.code}`,
   code: room.code,
@@ -233,13 +245,17 @@ const mapRoomToGameTable = (room: RoomRow, players: RoomPlayerRow[]): GameTable 
   pot: Number(room.pot),
   deck: room.deck || [],
   round: room.round,
-  roundResolved: players.length > 0 && players.every((player) => player.bet >= 0),
+  roundResolved:
+    players.length > 0 &&
+    players.every((player) => player.bet >= 0) &&
+    (room.game_mode !== "vs_ai" || (room.ai_state ? Number(room.ai_state.bet) >= 0 : false)),
   currentTurn: currentTurnIndex >= 0 ? currentTurnIndex : 0,
   turnStartedAt: room.turn_started_at ? new Date(room.turn_started_at).getTime() : 0,
   status: room.status,
   createdAt: new Date(room.created_at).getTime(),
   lastActivity: new Date(room.updated_at).getTime(),
-  players: sortedPlayers.map((player) => ({
+  players: [
+    ...sortedPlayers.map((player) => ({
       id: player.user_id,
       name: player.profiles?.username || "Jugador",
       photoUrl: player.profiles?.avatar_url || "",
@@ -254,6 +270,24 @@ const mapRoomToGameTable = (room: RoomRow, players: RoomPlayerRow[]): GameTable 
       rebuyDeadline: player.rebuy_deadline ? new Date(player.rebuy_deadline).getTime() : undefined,
       hasDeclinedRebuy: player.has_declined_rebuy,
     })),
+    ...(room.game_mode === "vs_ai" && room.ai_state
+      ? [
+          {
+            id: `ai:${room.id}`,
+            name: room.ai_state.name || "IA",
+            photoUrl: "",
+            isAI: true,
+            balance: Number(room.ai_state.balance),
+            bet: Number(room.ai_state.bet),
+            cards: room.ai_state.cards || [],
+            thirdCard: room.ai_state.thirdCard || null,
+            result: room.ai_state.result || "",
+            connected: true,
+            lastSeen: Date.now(),
+          },
+        ]
+      : []),
+  ],
   };
 };
 
@@ -308,7 +342,9 @@ const loadLobbyTables = async (): Promise<ApiResponse<{ tables: TableInfo[] }>> 
 
   return {
     data: {
-      tables: (rooms || []).map((room) => ({
+      tables: (rooms || [])
+        .filter((room) => room.game_mode !== "vs_ai")
+        .map((room) => ({
         id: room.id,
         name: room.name || `Mesa ${room.code}`,
         code: room.code,
@@ -329,7 +365,8 @@ export const realtimeGame = {
     buyIn: number,
     initialStack: number,
     maxPlayers: number,
-    userId: string
+    userId: string,
+    gameMode: "pvp" | "vs_ai" = "pvp"
   ): Promise<ApiResponse<{ table: GameTable }>> {
     void userId;
     return authFetch<{ table: GameTable }>("/realtime/rooms", "POST", {
@@ -337,6 +374,8 @@ export const realtimeGame = {
       buyIn,
       initialStack,
       maxPlayers,
+      gameMode,
+      aiInitialStack: initialStack,
     });
   },
 

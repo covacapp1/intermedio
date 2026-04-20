@@ -23,6 +23,7 @@ export interface Player {
 }
 
 export interface GameState {
+  mode?: "pvp" | "vs_ai";
   tableCode: string;
   initialBuyIn: number;
   maxPlayers: number;
