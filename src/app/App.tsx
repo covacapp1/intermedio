@@ -98,7 +98,7 @@ function App() {
   });
   const [showPotModal, setShowPotModal] = useState(false);
   const [showRebuyModal, setShowRebuyModal] = useState(false);
-  const [timeLeftSeconds, setTimeLeftSeconds] = useState(15);
+  const [timeLeftSeconds, setTimeLeftSeconds] = useState(20);
   const [isProcessingBet, setIsProcessingBet] = useState(false);
 
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -420,7 +420,7 @@ function App() {
 
   useEffect(() => {
     if (currentView !== "game" || gameState.roundResolved || !gameState.turnStartedAt) {
-      setTimeLeftSeconds(15);
+      setTimeLeftSeconds(20);
       return;
     }
 

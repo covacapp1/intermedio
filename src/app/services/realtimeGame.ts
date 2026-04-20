@@ -96,7 +96,7 @@ interface RoomPlayerRow {
   } | null;
 }
 
-const TURN_DURATION_MS = 15000;
+const TURN_DURATION_MS = 20000;
 const supabaseKey =
   (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined)?.trim() ||
   publicAnonKey;
@@ -219,7 +219,11 @@ const getNextPendingTurn = (players: RoomPlayerRow[], startIndex: number): numbe
   return -1;
 };
 
-const mapRoomToGameTable = (room: RoomRow, players: RoomPlayerRow[]): GameTable => ({
+const mapRoomToGameTable = (room: RoomRow, players: RoomPlayerRow[]): GameTable => {
+  const sortedPlayers = [...players].sort((left, right) => left.seat - right.seat);
+  const currentTurnIndex = sortedPlayers.findIndex((player) => player.seat === room.current_turn_seat);
+
+  return {
   id: room.id,
   name: room.name || `Mesa ${room.code}`,
   code: room.code,
@@ -230,14 +234,12 @@ const mapRoomToGameTable = (room: RoomRow, players: RoomPlayerRow[]): GameTable 
   deck: room.deck || [],
   round: room.round,
   roundResolved: players.length > 0 && players.every((player) => player.bet >= 0),
-  currentTurn: room.current_turn_seat,
+  currentTurn: currentTurnIndex >= 0 ? currentTurnIndex : 0,
   turnStartedAt: room.turn_started_at ? new Date(room.turn_started_at).getTime() : 0,
   status: room.status,
   createdAt: new Date(room.created_at).getTime(),
   lastActivity: new Date(room.updated_at).getTime(),
-  players: [...players]
-    .sort((left, right) => left.seat - right.seat)
-    .map((player) => ({
+  players: sortedPlayers.map((player) => ({
       id: player.user_id,
       name: player.profiles?.username || "Jugador",
       photoUrl: player.profiles?.avatar_url || "",
@@ -252,7 +254,8 @@ const mapRoomToGameTable = (room: RoomRow, players: RoomPlayerRow[]): GameTable 
       rebuyDeadline: player.rebuy_deadline ? new Date(player.rebuy_deadline).getTime() : undefined,
       hasDeclinedRebuy: player.has_declined_rebuy,
     })),
-});
+  };
+};
 
 const loadRoomRows = async (roomId: string): Promise<ApiResponse<{ room: RoomRow; players: RoomPlayerRow[] }>> => {
   const { data: room, error: roomError } = await supabase

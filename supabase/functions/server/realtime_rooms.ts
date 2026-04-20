@@ -46,7 +46,7 @@ interface RoomPlayerRow {
   } | null;
 }
 
-const TURN_DURATION_MS = 15000;
+const TURN_DURATION_MS = 20000;
 
 const serviceClient = () =>
   createClient(
@@ -102,14 +102,34 @@ const randomTableCode = (): string => {
   return code;
 };
 
-const getNextPendingTurn = (players: RoomPlayerRow[], startIndex: number): number => {
-  for (let offset = 1; offset <= players.length; offset += 1) {
-    const candidate = (startIndex + offset) % players.length;
-    const player = players[candidate];
+const getNextAvailableSeat = (players: RoomPlayerRow[], maxPlayers: number): number => {
+  const usedSeats = new Set(players.map((player) => player.seat));
+  for (let seat = 0; seat < maxPlayers; seat += 1) {
+    if (!usedSeats.has(seat)) {
+      return seat;
+    }
+  }
+  return -1;
+};
+
+const getNextPendingTurn = (players: RoomPlayerRow[], startSeat: number): number => {
+  const sortedPlayers = [...players].sort((left, right) => left.seat - right.seat);
+  if (sortedPlayers.length === 0) {
+    return -1;
+  }
+
+  let startIndex = sortedPlayers.findIndex((player) => player.seat === startSeat);
+  if (startIndex < 0) {
+    startIndex = 0;
+  }
+
+  for (let offset = 1; offset <= sortedPlayers.length; offset += 1) {
+    const candidate = (startIndex + offset) % sortedPlayers.length;
+    const player = sortedPlayers[candidate];
     // Skip players who are waiting for rebuy (balance = 0 and rebuy_deadline is in the future)
     const isWaitingForRebuy = player.balance === 0 && player.rebuy_deadline && new Date(player.rebuy_deadline) > new Date();
     if (player.bet < 0 && !isWaitingForRebuy && !player.has_declined_rebuy) {
-      return candidate;
+      return player.seat;
     }
   }
   return -1;
@@ -143,7 +163,11 @@ const loadRoomRows = async (roomId: string) => {
   };
 };
 
-const mapRoomToGameTable = (room: RoomRow, players: RoomPlayerRow[]) => ({
+const mapRoomToGameTable = (room: RoomRow, players: RoomPlayerRow[]) => {
+  const sortedPlayers = [...players].sort((left, right) => left.seat - right.seat);
+  const currentTurnIndex = sortedPlayers.findIndex((player) => player.seat === room.current_turn_seat);
+
+  return {
   id: room.id,
   name: room.name || `Mesa ${room.code}`,
   code: room.code,
@@ -154,14 +178,12 @@ const mapRoomToGameTable = (room: RoomRow, players: RoomPlayerRow[]) => ({
   deck: room.deck || [],
   round: room.round,
   roundResolved: players.length > 0 && players.every((player) => player.bet >= 0),
-  currentTurn: room.current_turn_seat,
+  currentTurn: currentTurnIndex >= 0 ? currentTurnIndex : 0,
   turnStartedAt: room.turn_started_at ? new Date(room.turn_started_at).getTime() : 0,
   status: room.status,
   createdAt: new Date(room.created_at).getTime(),
   lastActivity: new Date(room.updated_at).getTime(),
-  players: [...players]
-    .sort((left, right) => left.seat - right.seat)
-    .map((player) => ({
+  players: sortedPlayers.map((player) => ({
       id: player.user_id,
       name: player.profiles?.username || "Jugador",
       photoUrl: player.profiles?.avatar_url || "",
@@ -174,7 +196,8 @@ const mapRoomToGameTable = (room: RoomRow, players: RoomPlayerRow[]) => ({
       connected: player.is_connected,
       lastSeen: new Date(player.last_seen_at).getTime(),
     })),
-});
+  };
+};
 
 const requireUserId = async (authorizationHeader: string | undefined) => {
   if (!authorizationHeader?.startsWith("Bearer ")) {
@@ -273,10 +296,15 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         return c.json({ error: "Table is full" }, 400);
       }
 
+      const nextSeat = getNextAvailableSeat(roomState.players, roomState.room.max_players);
+      if (nextSeat < 0) {
+        return c.json({ error: "Table is full" }, 400);
+      }
+
       const { error: insertError } = await db.from("room_players").insert({
         room_id: roomId,
         user_id: userId,
-        seat: roomState.players.length,
+        seat: nextSeat,
         is_ready: true,
         is_connected: true,
         balance: stackAmount,
@@ -312,12 +340,14 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
           return { id: player.id, cards: [card1, card2] };
         });
 
+        const firstSeat = [...refreshed.players].sort((left, right) => left.seat - right.seat)[0]?.seat ?? 0;
+
         await db
           .from("rooms")
           .update({
             status: "playing",
             round: 1,
-            current_turn_seat: 0,
+            current_turn_seat: firstSeat,
             turn_started_at: new Date().toISOString(),
             deck,
           })
@@ -371,8 +401,8 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         return c.json({ error: "Player not in room" }, 404);
       }
 
-      if (playerIndex !== room.current_turn_seat) {
-        console.error(`Turn mismatch: playerIndex=${playerIndex}, current_turn_seat=${room.current_turn_seat}, userId=${userId}, playerSeat=${player?.seat}`);
+      if (player.seat !== room.current_turn_seat) {
+        console.error(`Turn mismatch: playerSeat=${player.seat}, current_turn_seat=${room.current_turn_seat}, userId=${userId}`);
         return c.json({ error: "It is not this player's turn" }, 400);
       }
 
@@ -448,11 +478,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         current_turn_seat: nextTurn === -1 ? room.current_turn_seat : nextTurn,
         turn_started_at: nextTurn === -1 ? room.turn_started_at : new Date().toISOString(),
       };
-      // Only add round_resolved if it might exist in DB
-      if (nextTurn === -1) {
-        roomUpdateData.round_resolved = true;
-      }
-      console.log(`[BET] Updating room: roomId=${roomId}, potBefore=${currentPot}, potAfter=${nextPot}, current_turn_seat=${roomUpdateData.current_turn_seat}, round_resolved=${roomUpdateData.round_resolved}`);
+      console.log(`[BET] Updating room: roomId=${roomId}, potBefore=${currentPot}, potAfter=${nextPot}, current_turn_seat=${roomUpdateData.current_turn_seat}`);
       const roomUpdateResult = await db
         .from("rooms")
         .update(roomUpdateData)
@@ -508,6 +534,11 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         }
       }
 
+      const firstActiveSeat =
+        [...activePlayers].sort((left, right) => left.seat - right.seat)[0]?.seat ??
+        sortedPlayers[0]?.seat ??
+        0;
+
       let deck = room.deck && room.deck.length >= playerUpdates.length * 3 ? room.deck : shuffleDeck(createDeck());
       for (const player of playerUpdates) {
         const [card1, deck1] = drawCard(deck);
@@ -523,7 +554,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         .from("rooms")
         .update({
           round: room.round + 1,
-          current_turn_seat: 0,
+          current_turn_seat: firstActiveSeat,
           turn_started_at: new Date().toISOString(),
           pot: nextPot,
           deck,
@@ -689,7 +720,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       }
 
       const sortedPlayers = [...players].sort((left, right) => left.seat - right.seat);
-      const currentPlayer = sortedPlayers[room.current_turn_seat];
+      const currentPlayer = sortedPlayers.find((player) => player.seat === room.current_turn_seat);
       const startedAt = room.turn_started_at ? new Date(room.turn_started_at).getTime() : 0;
 
       // Check for expired rebuy deadlines

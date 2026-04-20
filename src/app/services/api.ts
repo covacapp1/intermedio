@@ -80,7 +80,7 @@ export interface GameTable {
   lastActivity: number;
 }
 
-const TURN_DURATION_MS = 15000;
+const TURN_DURATION_MS = 20000;
 
 const isBrowser = typeof window !== "undefined";
 const walletStorage = {
