@@ -24,9 +24,15 @@ export function GameTable({
   message,
   isProcessingBet = false,
 }: GameTableProps) {
+  const twoPlayerPositions = ["bottom", "top-center"] as const;
   const threePlayerPositions = ["bottom", "top-left", "top-right"] as const;
   const sixPlayerPositions = ["bottom", "left", "top-left", "top-center", "top-right", "right"] as const;
-  const positions = gameState.maxPlayers > 3 ? sixPlayerPositions : threePlayerPositions;
+  const positions =
+    gameState.maxPlayers === 2
+      ? twoPlayerPositions
+      : gameState.maxPlayers > 3
+      ? sixPlayerPositions
+      : threePlayerPositions;
   const seats = positions.map((position, index) => ({
     position,
     player: gameState.players[index],

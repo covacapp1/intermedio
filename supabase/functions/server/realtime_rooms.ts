@@ -220,6 +220,24 @@ const isAiSeat = (room: RoomRow, seat: number): boolean => {
   return getRoomMode(room) === "vs_ai" && !!room.ai_state && room.ai_state.seat === seat;
 };
 
+const aiStateToTurnPlayer = (roomId: string, aiState: AiState): RoomPlayerRow => ({
+  id: `ai-turn-${roomId}`,
+  room_id: roomId,
+  user_id: buildAiId(roomId),
+  seat: aiState.seat,
+  is_ready: true,
+  is_connected: true,
+  balance: Number(aiState.balance),
+  bet: Number(aiState.bet),
+  cards: aiState.cards || [],
+  third_card: aiState.thirdCard || null,
+  result: aiState.result || "",
+  joined_at: new Date().toISOString(),
+  last_seen_at: new Date().toISOString(),
+  rebuy_deadline: null,
+  has_declined_rebuy: false,
+});
+
 const createDeck = (): Card[] => {
   const suits = ["oros", "copas", "espadas", "bastos"];
   const values = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12];
@@ -726,12 +744,14 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         }
       }
 
-      let nextTurn = getNextPendingTurn(
-        sortedPlayers.map((currentPlayer) =>
-          currentPlayer.id === player.id ? { ...currentPlayer, bet: betAmount } : currentPlayer
-        ),
-        room.current_turn_seat
+      const baseTurnPlayers = sortedPlayers.map((currentPlayer) =>
+        currentPlayer.id === player.id ? { ...currentPlayer, bet: betAmount } : currentPlayer
       );
+      const turnPlayers =
+        getRoomMode(room) === "vs_ai" && room.ai_state
+          ? [...baseTurnPlayers, aiStateToTurnPlayer(roomId, room.ai_state)]
+          : baseTurnPlayers;
+      let nextTurn = getNextPendingTurn(turnPlayers, room.current_turn_seat);
       console.log(`[BET] Next turn calculation: nextTurn=${nextTurn}, currentTurnSeat=${room.current_turn_seat}`);
 
       let nextAiState = room.ai_state ? { ...room.ai_state } : null;
@@ -779,26 +799,8 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
 
         nextTurn = getNextPendingTurn(
           [
-            ...sortedPlayers.map((currentPlayer) =>
-              currentPlayer.id === player.id ? { ...currentPlayer, bet: betAmount } : currentPlayer
-            ),
-            {
-              id: `ai-state-${roomId}`,
-              room_id: roomId,
-              user_id: buildAiId(roomId),
-              seat: nextAiState.seat,
-              is_ready: true,
-              is_connected: true,
-              balance: nextAiState.balance,
-              bet: nextAiState.bet,
-              cards: nextAiState.cards,
-              third_card: nextAiState.thirdCard,
-              result: nextAiState.result,
-              joined_at: new Date().toISOString(),
-              last_seen_at: new Date().toISOString(),
-              rebuy_deadline: null,
-              has_declined_rebuy: false,
-            } as RoomPlayerRow,
+            ...baseTurnPlayers,
+            aiStateToTurnPlayer(roomId, nextAiState),
           ],
           nextAiState.seat
         );
@@ -822,6 +824,9 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         .update(updateData)
         .eq("id", player.id);
       console.log(`Player update result:`, playerUpdateResult.error ? playerUpdateResult.error : "Success");
+      if (playerUpdateResult.error) {
+        return c.json({ error: playerUpdateResult.error.message }, 500);
+      }
 
       const roomUpdateData: Record<string, unknown> = {
         pot: nextPotForRoom,
@@ -838,6 +843,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       console.log(`[BET] Room update result:`, roomUpdateResult.error ? roomUpdateResult.error : "Success");
       if (roomUpdateResult.error) {
         console.error(`[BET] Room update failed with data:`, roomUpdateData);
+        return c.json({ error: roomUpdateResult.error.message }, 500);
       }
 
       await db.from("room_moves").insert({
@@ -1166,9 +1172,12 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         Date.now() - startedAt >= TURN_DURATION_MS
       ) {
         const nextTurn = getNextPendingTurn(
-          sortedPlayers.map((item) =>
-            item.id === currentPlayer.id ? { ...item, bet: 0 } : item
-          ),
+          [
+            ...sortedPlayers.map((item) =>
+              item.id === currentPlayer.id ? { ...item, bet: 0 } : item
+            ),
+            ...(aiState ? [aiStateToTurnPlayer(roomId, aiState)] : []),
+          ],
           room.current_turn_seat
         );
 
@@ -1240,23 +1249,13 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         const nextTurn = getNextPendingTurn(
           [
             ...sortedPlayers,
-            {
-              id: `ai-heartbeat-${roomId}`,
-              room_id: roomId,
-              user_id: buildAiId(roomId),
-              seat: aiState.seat,
-              is_ready: true,
-              is_connected: true,
+            aiStateToTurnPlayer(roomId, {
+              ...aiState,
               balance: nextBalance,
               bet: aiBet,
-              cards: aiState.cards,
-              third_card: thirdCard,
+              thirdCard,
               result,
-              joined_at: new Date().toISOString(),
-              last_seen_at: new Date().toISOString(),
-              rebuy_deadline: null,
-              has_declined_rebuy: false,
-            } as RoomPlayerRow,
+            }),
           ],
           aiState.seat
         );
