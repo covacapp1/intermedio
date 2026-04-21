@@ -846,6 +846,71 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         return c.json({ error: roomUpdateResult.error.message }, 500);
       }
 
+      if (getRoomMode(room) === "vs_ai" && nextTurn === -1 && nextAiState && nextBalance > 0 && Number(nextAiState.balance) > 0) {
+        let autoDeck = nextDeckForRoom.length >= 6 ? nextDeckForRoom : shuffleDeck(createDeck());
+        let autoPot = nextPotForRoom;
+        let autoPlayerBalance = nextBalance;
+        let autoAiBalance = Number(nextAiState.balance);
+        const buyInValue = Number(room.buy_in);
+
+        // If pot is empty, force a new pot for the next hand from both stacks.
+        if (autoPot <= 0) {
+          if (autoPlayerBalance >= buyInValue) {
+            autoPlayerBalance -= buyInValue;
+            autoPot += buyInValue;
+          }
+          if (autoAiBalance >= buyInValue) {
+            autoAiBalance -= buyInValue;
+            autoPot += buyInValue;
+          }
+        }
+
+        const [playerCard1, deck1] = drawCard(autoDeck);
+        const [playerCard2, deck2] = drawCard(deck1);
+        const [aiCard1, deck3] = drawCard(deck2);
+        const [aiCard2, deck4] = drawCard(deck3);
+        autoDeck = deck4;
+
+        const playerResetResult = await db
+          .from("room_players")
+          .update({
+            balance: autoPlayerBalance,
+            cards: [playerCard1, playerCard2],
+            third_card: null,
+            bet: -1,
+            result: "",
+            rebuy_deadline: null,
+          })
+          .eq("id", player.id);
+
+        if (playerResetResult.error) {
+          return c.json({ error: playerResetResult.error.message }, 500);
+        }
+
+        const autoRoomResult = await db
+          .from("rooms")
+          .update({
+            round: room.round + 1,
+            pot: autoPot,
+            deck: autoDeck,
+            current_turn_seat: player.seat,
+            turn_started_at: new Date().toISOString(),
+            ai_state: {
+              ...nextAiState,
+              balance: autoAiBalance,
+              cards: [aiCard1, aiCard2],
+              thirdCard: null,
+              bet: -1,
+              result: "",
+            },
+          })
+          .eq("id", roomId);
+
+        if (autoRoomResult.error) {
+          return c.json({ error: autoRoomResult.error.message }, 500);
+        }
+      }
+
       await db.from("room_moves").insert({
         room_id: roomId,
         user_id: userId,
