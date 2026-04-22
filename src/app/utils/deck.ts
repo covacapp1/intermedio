@@ -34,5 +34,6 @@ export function evaluateHand(cardA: Card, cardB: Card, cardC: Card): boolean {
 }
 
 export function formatMoney(value: number): string {
-  return `${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(Math.round(value))} INT`;
+  // Keep display aligned with betting rules (integer floor).
+  return `${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(Math.floor(Math.max(0, value)))} INT`;
 }

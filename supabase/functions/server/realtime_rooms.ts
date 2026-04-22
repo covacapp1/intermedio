@@ -88,6 +88,7 @@ const TURN_DURATION_MS = 20000;
 const ROOM_EXPIRATION_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_AI_NAME = "Sheriff IA";
 const DEFAULT_ADMIN_EMAIL = "grafica.covac@hotmail.com";
+let rebuyColumnsSupported: boolean | null = null;
 
 const serviceClient = () =>
   createClient(
@@ -97,6 +98,30 @@ const serviceClient = () =>
   );
 
 const walletKey = (userId: string) => `wallet:${userId}`;
+
+const isMissingRebuyColumnsError = (message: string): boolean => {
+  const normalized = message.toLowerCase();
+  return normalized.includes("rebuy_deadline") || normalized.includes("has_declined_rebuy");
+};
+
+const detectRebuyColumnsSupport = async (db = serviceClient()): Promise<boolean> => {
+  if (rebuyColumnsSupported !== null) {
+    return rebuyColumnsSupported;
+  }
+
+  const { error } = await db.from("room_players").select("rebuy_deadline,has_declined_rebuy").limit(1);
+  if (!error) {
+    rebuyColumnsSupported = true;
+    return true;
+  }
+
+  if (isMissingRebuyColumnsError(error.message)) {
+    rebuyColumnsSupported = false;
+    return false;
+  }
+
+  throw new Error(error.message);
+};
 
 const createEmptyWallet = (userId: string, email: string): WalletSummary => ({
   userId,
@@ -329,6 +354,7 @@ const cleanupExpiredRooms = async (db = serviceClient()) => {
 
 const loadRoomRows = async (roomId: string) => {
   const db = serviceClient();
+  const supportsRebuyColumns = await detectRebuyColumnsSupport(db);
   const { data: room, error: roomError } = await db
     .from("rooms")
     .select("*")
@@ -344,9 +370,13 @@ const loadRoomRows = async (roomId: string) => {
     throw new Error("Room not found");
   }
 
+  const playerSelect = supportsRebuyColumns
+    ? "id, room_id, user_id, seat, is_ready, is_connected, balance, bet, cards, third_card, result, joined_at, last_seen_at, rebuy_deadline, has_declined_rebuy, profiles(username, avatar_url)"
+    : "id, room_id, user_id, seat, is_ready, is_connected, balance, bet, cards, third_card, result, joined_at, last_seen_at, profiles(username, avatar_url)";
+
   const { data: players, error: playersError } = await db
     .from("room_players")
-    .select("*, profiles(username, avatar_url)")
+    .select(playerSelect)
     .eq("room_id", roomId)
     .order("seat", { ascending: true });
 
@@ -356,7 +386,11 @@ const loadRoomRows = async (roomId: string) => {
 
   return {
     room: room as RoomRow,
-    players: (players || []) as RoomPlayerRow[],
+    players: ((players || []) as Partial<RoomPlayerRow>[]).map((player) => ({
+      ...player,
+      rebuy_deadline: supportsRebuyColumns ? (player.rebuy_deadline ?? null) : null,
+      has_declined_rebuy: supportsRebuyColumns ? Boolean(player.has_declined_rebuy) : false,
+    })) as RoomPlayerRow[],
   };
 };
 
@@ -694,6 +728,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
 
       const db = serviceClient();
       await cleanupExpiredRooms(db);
+      const supportsRebuyColumns = await detectRebuyColumnsSupport(db);
       const { room, players } = await loadRoomRows(roomId);
       console.log(`[BET] Room loaded: roomExists=${!!room}, roomStatus=${room?.status}, currentTurnSeat=${room?.current_turn_seat}, playersCount=${players?.length}`);
 
@@ -732,7 +767,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       let nextPot = currentPot;
       let result = "Pasa";
       let thirdCard: Card | null = null;
-      let rebuyDeadline: string | null = player.rebuy_deadline || null;
+      let rebuyDeadline: string | null = supportsRebuyColumns ? (player.rebuy_deadline || null) : null;
 
       if (betAmount > 0) {
         const [drawnCard, nextDeck] = drawCard(deck);
@@ -833,7 +868,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         last_seen_at: new Date().toISOString(),
       };
       // Only add rebuy_deadline if it was set (column may not exist in DB)
-      if (rebuyDeadline) {
+      if (supportsRebuyColumns && rebuyDeadline) {
         updateData.rebuy_deadline = rebuyDeadline;
       }
       const playerUpdateResult = await db
@@ -888,16 +923,20 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         const [aiCard2, deck4] = drawCard(deck3);
         autoDeck = deck4;
 
+        const playerResetPayload: Record<string, unknown> = {
+          balance: autoPlayerBalance,
+          cards: [playerCard1, playerCard2],
+          third_card: null,
+          bet: -1,
+          result: "",
+        };
+        if (supportsRebuyColumns) {
+          playerResetPayload.rebuy_deadline = null;
+        }
+
         const playerResetResult = await db
           .from("room_players")
-          .update({
-            balance: autoPlayerBalance,
-            cards: [playerCard1, playerCard2],
-            third_card: null,
-            bet: -1,
-            result: "",
-            rebuy_deadline: null,
-          })
+          .update(playerResetPayload)
           .eq("id", player.id);
 
         if (playerResetResult.error) {
@@ -949,6 +988,10 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       const roomId = c.req.param("roomId");
       const db = serviceClient();
       await cleanupExpiredRooms(db);
+      const supportsRebuyColumns = await detectRebuyColumnsSupport(db);
+      if (!supportsRebuyColumns) {
+        return c.json({ error: "Rebuy no disponible: falta la migracion 006_add_rebuy_fields.sql" }, 400);
+      }
       const { room, players } = await loadRoomRows(roomId);
       const sortedPlayers = [...players].sort((left, right) => left.seat - right.seat);
       const mode = getRoomMode(room);
@@ -1050,6 +1093,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       const roomId = c.req.param("roomId");
       const db = serviceClient();
       await cleanupExpiredRooms(db);
+      const supportsRebuyColumns = await detectRebuyColumnsSupport(db);
       const { room, players } = await loadRoomRows(roomId);
       const player = players.find((item) => item.user_id === userId);
 
@@ -1132,7 +1176,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
 
       if (player) {
         // If player has active rebuy deadline, mark as declined
-        if (player.rebuy_deadline && player.balance === 0) {
+        if (supportsRebuyColumns && player.rebuy_deadline && player.balance === 0) {
           await db
             .from("room_players")
             .update({
@@ -1187,6 +1231,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       const roomId = c.req.param("roomId");
       const db = serviceClient();
       await cleanupExpiredRooms(db);
+      const supportsRebuyColumns = await detectRebuyColumnsSupport(db);
       const { room, players } = await loadRoomRows(roomId);
       const player = players.find((item) => item.user_id === userId);
 
@@ -1207,15 +1252,17 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
 
       // Check for expired rebuy deadlines
       const now = new Date();
-      for (const p of sortedPlayers) {
-        if (p.rebuy_deadline && new Date(p.rebuy_deadline) < now && p.balance === 0) {
-          await db
-            .from("room_players")
-            .update({
-              has_declined_rebuy: true,
-              rebuy_deadline: null,
-            })
-            .eq("id", p.id);
+      if (supportsRebuyColumns) {
+        for (const p of sortedPlayers) {
+          if (p.rebuy_deadline && new Date(p.rebuy_deadline) < now && p.balance === 0) {
+            await db
+              .from("room_players")
+              .update({
+                has_declined_rebuy: true,
+                rebuy_deadline: null,
+              })
+              .eq("id", p.id);
+          }
         }
       }
 
