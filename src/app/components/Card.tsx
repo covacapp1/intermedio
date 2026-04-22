@@ -9,7 +9,7 @@ export function Card({ card, hidden }: CardProps) {
   if (hidden || !card) {
     return (
       <div 
-        className="w-[28px] h-[40px] xs:w-[32px] xs:h-[46px] sm:w-[40px] sm:h-[56px] md:w-[50px] md:h-[70px] rounded-md sm:rounded-lg border-2 border-zinc-700 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black text-zinc-400 flex items-center justify-center text-[10px] sm:text-sm shadow-[0_4px_8px_rgba(0,0,0,0.6)] relative overflow-hidden"
+        className="w-[32px] h-[46px] xs:w-[36px] xs:h-[52px] sm:w-[40px] sm:h-[56px] md:w-[50px] md:h-[70px] rounded-md sm:rounded-lg border-2 border-zinc-700 bg-gradient-to-br from-zinc-800 via-zinc-900 to-black text-zinc-400 flex items-center justify-center text-[10px] sm:text-sm shadow-[0_4px_8px_rgba(0,0,0,0.6)] relative overflow-hidden"
         style={{
           backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(0,0,0,0.3) 2px, rgba(0,0,0,0.3) 4px)',
         }}
@@ -40,7 +40,7 @@ export function Card({ card, hidden }: CardProps) {
 
   return (
     <div 
-      className="w-[28px] h-[40px] xs:w-[32px] xs:h-[46px] sm:w-[40px] sm:h-[56px] md:w-[50px] md:h-[70px] rounded-md sm:rounded-lg border-2 border-zinc-300 bg-gradient-to-br from-white via-zinc-50 to-zinc-100 text-black flex flex-col items-center justify-center text-center p-0.5 sm:p-1 shadow-[0_4px_8px_rgba(0,0,0,0.3)] relative overflow-hidden"
+      className="w-[32px] h-[46px] xs:w-[36px] xs:h-[52px] sm:w-[40px] sm:h-[56px] md:w-[50px] md:h-[70px] rounded-md sm:rounded-lg border-2 border-zinc-300 bg-gradient-to-br from-white via-zinc-50 to-zinc-100 text-black flex flex-col items-center justify-center text-center p-0.5 sm:p-1 shadow-[0_4px_8px_rgba(0,0,0,0.3)] relative overflow-hidden"
       style={{
         boxShadow: '0 4px 8px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.8)',
       }}

@@ -20,6 +20,31 @@ const positionStyles = {
   bottom: "absolute left-1/2 bottom-[19%] -translate-x-1/2 xs:bottom-[17%] sm:bottom-[7%]",
 } as const;
 
+function PlayerCards({ player }: { player?: Player }) {
+  if (!player) {
+    return (
+      <>
+        <div className="h-9 w-7 xs:h-10 xs:w-8 sm:h-12 sm:w-8 rounded-md border border-dashed border-white/20 bg-black/15" />
+        <div className="h-9 w-7 xs:h-10 xs:w-8 sm:h-12 sm:w-8 rounded-md border border-dashed border-white/20 bg-black/15" />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Card card={player.cards[0]} />
+      {player.thirdCard ? (
+        <Card card={player.thirdCard} />
+      ) : player.bet > 0 ? (
+        <div className="h-9 w-7 xs:h-10 xs:w-8 sm:h-12 sm:w-8 rounded-md border-2 border-dashed border-[#fff3a3]/50 bg-[#1b2a1f]/40 flex items-center justify-center animate-pulse">
+          <span className="text-[#fff3a3]/60 text-lg font-bold">?</span>
+        </div>
+      ) : null}
+      <Card card={player.cards[1]} />
+    </>
+  );
+}
+
 function StandardSeat({
   player,
   seatNumber,
@@ -102,18 +127,8 @@ function StandardSeat({
         ) : null}
       </div>
 
-      <div className="flex min-h-[36px] xs:min-h-[40px] sm:min-h-[52px] gap-0.5 xs:gap-1 sm:gap-1.5 items-center justify-center">
-        {player ? (
-          <>
-            <Card card={player.cards[0]} />
-            <Card card={player.cards[1]} />
-          </>
-        ) : (
-          <>
-            <div className="h-8 w-6 xs:h-9 xs:w-7 sm:h-12 sm:w-8 rounded-md border border-dashed border-white/20 bg-black/15" />
-            <div className="h-8 w-6 xs:h-9 xs:w-7 sm:h-12 sm:w-8 rounded-md border border-dashed border-white/20 bg-black/15" />
-          </>
-        )}
+      <div className="flex min-h-[40px] xs:min-h-[44px] sm:min-h-[52px] gap-0.5 xs:gap-1 sm:gap-1.5 items-center justify-center">
+        <PlayerCards player={player} />
       </div>
 
       {player?.result ? (
@@ -147,7 +162,7 @@ export function PlayerSeat({
   if (isBottomCurrentUser) {
     return (
       <div className={`${positionStyles[position]} z-20`}>
-        <div className="sm:hidden w-[min(92vw,370px)] rounded-xl border border-[#D4AF37]/60 bg-[#102118]/92 px-2 py-1.5 shadow-[0_8px_22px_rgba(0,0,0,0.55)]">
+        <div className="sm:hidden w-[min(95vw,420px)] rounded-xl border border-[#D4AF37]/60 bg-[#102118]/92 px-2.5 py-2 shadow-[0_8px_22px_rgba(0,0,0,0.55)]">
           <div className="flex items-center gap-2">
             <div className="relative">
               {player && isCurrentTurn ? (
@@ -155,7 +170,7 @@ export function PlayerSeat({
                   {timeLeftSeconds}s
                 </div>
               ) : null}
-              <div className="h-11 w-11 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-[#3d2a18] flex items-center justify-center">
+              <div className="h-12 w-12 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-[#3d2a18] flex items-center justify-center">
                 {player?.photoUrl ? (
                   <img src={player.photoUrl} alt={player.name} className="w-full h-full object-cover" />
                 ) : (
@@ -164,14 +179,13 @@ export function PlayerSeat({
               </div>
             </div>
 
-            <div className="min-w-0 rounded-md border border-white/20 bg-black/35 px-2 py-1">
-              <p className="max-w-[120px] truncate text-[11px] font-semibold text-white">{player?.name || `Jugador ${seatNumber ?? ""}`}</p>
-              <p className="text-[11px] font-bold text-[#FFD700]">{player ? formatMoney(player.balance) : "Asiento libre"}</p>
+            <div className="min-w-0 rounded-md border border-white/20 bg-black/35 px-2.5 py-1">
+              <p className="max-w-[130px] truncate text-xs font-semibold text-white">{player?.name || `Jugador ${seatNumber ?? ""}`}</p>
+              <p className="text-xs font-bold text-[#FFD700]">{player ? formatMoney(player.balance) : "Asiento libre"}</p>
             </div>
 
             <div className="ml-auto flex items-center gap-1">
-              <Card card={player?.cards?.[0]} />
-              <Card card={player?.cards?.[1]} />
+              <PlayerCards player={player} />
             </div>
           </div>
         </div>
