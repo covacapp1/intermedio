@@ -35,9 +35,9 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 md:p-6">
       <div
-        className="relative w-full max-w-md rounded-lg border-4 border-[#654321] bg-[#8B4513] p-6 shadow-[0_10px_30px_rgba(0,0,0,0.7)]"
+        className="relative flex max-h-[95vh] w-full max-w-6xl flex-col overflow-hidden rounded-lg border-4 border-[#654321] bg-[#8B4513] p-4 shadow-[0_10px_30px_rgba(0,0,0,0.7)] md:p-6"
         style={{
           background: "linear-gradient(135deg, #654321 0%, #8B4513 50%, #654321 100%)",
         }}
@@ -47,12 +47,13 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
         <div className="absolute -bottom-1 -left-1 h-8 w-8 border-b-4 border-l-4 border-[#D4AF37]"></div>
         <div className="absolute -bottom-1 -right-1 h-8 w-8 border-b-4 border-r-4 border-[#D4AF37]"></div>
 
-        <h2 className="mb-6 text-center text-3xl font-bold text-[#F5DEB3]" style={{ fontFamily: "serif" }}>
+        <h2 className="mb-4 text-center text-3xl font-bold text-[#F5DEB3] md:mb-6" style={{ fontFamily: "serif" }}>
           CREAR MESA
         </h2>
 
-        <div className="mb-6 space-y-4">
-          <div>
+        <div className="mb-4 grid min-h-0 flex-1 gap-4 overflow-y-auto pr-1 md:mb-6 md:grid-cols-2 md:gap-6">
+          <div className="space-y-4">
+            <div>
             <label className="mb-2 block text-sm font-semibold text-[#F5DEB3]">
               Nombre de la Mesa
             </label>
@@ -64,9 +65,9 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
               placeholder="Ej: Mesa del Sheriff"
               className="w-full rounded border-2 border-[#654321] bg-[#D2B48C] px-4 py-3 text-[#3E2723] placeholder-[#8B7355] focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]"
             />
-          </div>
+            </div>
 
-          <div>
+            <div>
             <label className="mb-2 block text-sm font-semibold text-[#F5DEB3]">
               Buy-in Obligatorio al Pozo
             </label>
@@ -79,9 +80,9 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
               step="100"
               className="w-full rounded border-2 border-[#654321] bg-[#D2B48C] px-4 py-3 text-[#3E2723] placeholder-[#8B7355] focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]"
             />
-          </div>
+            </div>
 
-          <div>
+            <div>
             <label className="mb-2 block text-sm font-semibold text-[#F5DEB3]">
               INT con los que ingresas a jugar
             </label>
@@ -94,9 +95,9 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
               step="100"
               className="w-full rounded border-2 border-[#654321] bg-[#D2B48C] px-4 py-3 text-[#3E2723] placeholder-[#8B7355] focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]"
             />
-          </div>
+            </div>
 
-          <div>
+            <div>
             <label className="mb-2 block text-sm font-semibold text-[#F5DEB3]">
               Modo de Juego
             </label>
@@ -108,9 +109,9 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
               <option value="pvp">Multijugador</option>
               <option value="vs_ai">1 jugador vs IA</option>
             </select>
-          </div>
+            </div>
 
-          <div>
+            <div>
             <label className="mb-2 block text-sm font-semibold text-[#F5DEB3]">
               Cantidad de Jugadores
             </label>
@@ -123,9 +124,10 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
               <option value={3}>3 jugadores</option>
               <option value={6}>6 jugadores</option>
             </select>
+            </div>
           </div>
 
-          <div className="rounded border border-[#D4AF37]/30 bg-black/20 p-3">
+          <div className="rounded border border-[#D4AF37]/30 bg-black/20 p-3 md:p-4">
             <p className="text-sm text-[#D2B48C]">
               <strong className="text-[#F5DEB3]">Modo:</strong> {gameMode === "vs_ai" ? "1 jugador vs IA" : "Multijugador"}
             </p>
@@ -152,7 +154,7 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 md:gap-4">
           <button
             onClick={onClose}
             className="rounded-lg border-3 border-[#654321] bg-gradient-to-b from-[#8B7355] to-[#5D4E37] py-3 font-bold text-white shadow-lg transition-all hover:from-[#A0826D] hover:to-[#8B7355] active:scale-95"
