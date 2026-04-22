@@ -85,6 +85,7 @@ interface WalletSummary {
 }
 
 const TURN_DURATION_MS = 20000;
+const ROOM_EXPIRATION_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_AI_NAME = "Sheriff IA";
 const DEFAULT_ADMIN_EMAIL = "grafica.covac@hotmail.com";
 
@@ -318,6 +319,14 @@ const getNextPendingTurn = (players: RoomPlayerRow[], startSeat: number): number
   return -1;
 };
 
+const cleanupExpiredRooms = async (db = serviceClient()) => {
+  const cutoffIso = new Date(Date.now() - ROOM_EXPIRATION_MS).toISOString();
+  const { error } = await db.from("rooms").delete().lt("created_at", cutoffIso);
+  if (error) {
+    throw new Error(error.message);
+  }
+};
+
 const loadRoomRows = async (roomId: string) => {
   const db = serviceClient();
   const { data: room, error: roomError } = await db
@@ -328,6 +337,11 @@ const loadRoomRows = async (roomId: string) => {
 
   if (roomError || !room) {
     throw new Error(roomError?.message || "Room not found");
+  }
+
+  if (Date.now() - new Date(room.created_at).getTime() >= ROOM_EXPIRATION_MS) {
+    await db.from("rooms").delete().eq("id", room.id);
+    throw new Error("Room not found");
   }
 
   const { data: players, error: playersError } = await db
@@ -444,6 +458,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       }
 
       const db = serviceClient();
+      await cleanupExpiredRooms(db);
       const { data: ownerProfile } = await db
         .from("profiles")
         .select("email")
@@ -573,6 +588,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       const body = await c.req.json();
       const stackAmount = Number(body.stackAmount);
       const db = serviceClient();
+      await cleanupExpiredRooms(db);
       const roomState = await loadRoomRows(roomId);
       if (getRoomMode(roomState.room) === "vs_ai") {
         return c.json({ error: "Esta mesa es privada (vs IA)." }, 400);
@@ -677,6 +693,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       console.log(`[BET] Received: roomId=${roomId}, userId=${userId}, betAmount=${betAmount}`);
 
       const db = serviceClient();
+      await cleanupExpiredRooms(db);
       const { room, players } = await loadRoomRows(roomId);
       console.log(`[BET] Room loaded: roomExists=${!!room}, roomStatus=${room?.status}, currentTurnSeat=${room?.current_turn_seat}, playersCount=${players?.length}`);
 
@@ -931,6 +948,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       await requireUserId(c.req.header("Authorization"));
       const roomId = c.req.param("roomId");
       const db = serviceClient();
+      await cleanupExpiredRooms(db);
       const { room, players } = await loadRoomRows(roomId);
       const sortedPlayers = [...players].sort((left, right) => left.seat - right.seat);
       const mode = getRoomMode(room);
@@ -1031,6 +1049,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       const userId = await requireUserId(c.req.header("Authorization"));
       const roomId = c.req.param("roomId");
       const db = serviceClient();
+      await cleanupExpiredRooms(db);
       const { room, players } = await loadRoomRows(roomId);
       const player = players.find((item) => item.user_id === userId);
 
@@ -1107,6 +1126,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       const userId = await requireUserId(c.req.header("Authorization"));
       const roomId = c.req.param("roomId");
       const db = serviceClient();
+      await cleanupExpiredRooms(db);
       const { room, players } = await loadRoomRows(roomId);
       const player = players.find((item) => item.user_id === userId);
 
@@ -1166,6 +1186,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       const userId = await requireUserId(c.req.header("Authorization"));
       const roomId = c.req.param("roomId");
       const db = serviceClient();
+      await cleanupExpiredRooms(db);
       const { room, players } = await loadRoomRows(roomId);
       const player = players.find((item) => item.user_id === userId);
 

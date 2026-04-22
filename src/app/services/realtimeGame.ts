@@ -316,10 +316,12 @@ const loadRoomRows = async (roomId: string): Promise<ApiResponse<{ room: RoomRow
 };
 
 const loadLobbyTables = async (): Promise<ApiResponse<{ tables: TableInfo[] }>> => {
+  const roomsCutoffIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data: rooms, error } = await supabase
     .from("rooms")
     .select("*")
     .in("status", ["waiting", "playing"])
+    .gte("created_at", roomsCutoffIso)
     .order("created_at", { ascending: false });
 
   if (error) {
