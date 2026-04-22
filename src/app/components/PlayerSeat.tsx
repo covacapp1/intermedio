@@ -16,7 +16,7 @@ const positionStyles = {
   "top-right": "absolute right-[4%] top-[12%] sm:right-[8%] sm:top-[12%] lg:right-[12%]",
   left: "absolute left-[1.5%] top-[38%] sm:left-[4%] lg:left-[5%]",
   right: "absolute right-[1.5%] top-[38%] sm:right-[4%] lg:right-[5%]",
-  bottom: "absolute left-1/2 bottom-[4%] -translate-x-1/2 sm:bottom-[7%]",
+  bottom: "absolute left-1/2 bottom-[16%] -translate-x-1/2 xs:bottom-[14%] sm:bottom-[7%]",
 } as const;
 
 export function PlayerSeat({

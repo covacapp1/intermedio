@@ -120,7 +120,7 @@ export function MultiplayerHelp({ isOpen, onClose }: MultiplayerHelpProps) {
             </h3>
             <ul className="space-y-2 text-[#D2B48C] text-sm">
               <li>• Las mesas se actualizan cada 3 segundos - si no ves una mesa, espera un momento</li>
-              <li>• El indicador verde "En vivo" muestra que estás conectado al servidor</li>
+              <li>• El estado de conexión se actualiza automáticamente mientras jugás</li>
               <li>• Puedes ver el estado de conexión de otros jugadores en su avatar</li>
               <li>• Si abandonas una mesa, se eliminará si no quedan jugadores</li>
               <li>• Abre la consola del navegador (F12) para ver las comunicaciones con el servidor</li>

@@ -1173,17 +1173,19 @@ function App() {
   }
 
   if (currentView === "game") {
+    const handleGameBack = () => {
+      const confirmed = window.confirm("Estas seguro de que quieres abandonar la mesa?");
+      if (confirmed) {
+        handleCloseTable();
+      }
+    };
+
     return (
       <div className="min-h-screen bg-[radial-gradient(circle_at_10%_10%,#1a2d22_0%,transparent_30%),radial-gradient(circle_at_90%_90%,#193126_0%,transparent_35%),#0a0f0d] text-white">
-        <main className="w-full max-w-[980px] mx-auto px-2 py-3 sm:p-4">
+        <main className="w-full max-w-none mx-auto p-0 sm:max-w-[980px] sm:p-4">
           <button
-            onClick={() => {
-              const confirmed = window.confirm("Estas seguro de que quieres abandonar la mesa?");
-              if (confirmed) {
-                handleCloseTable();
-              }
-            }}
-            className="mb-3 sm:mb-4 px-3 sm:px-4 py-2 text-sm sm:text-base bg-[#654321] text-[#F5DEB3] border-2 border-[#D4AF37] rounded hover:bg-[#7d5a2e] transition-colors"
+            onClick={handleGameBack}
+            className="mb-3 sm:mb-4 ml-2 mt-2 px-3 sm:px-4 py-2 text-sm sm:text-base bg-[#654321] text-[#F5DEB3] border-2 border-[#D4AF37] rounded hover:bg-[#7d5a2e] transition-colors hidden sm:inline-flex"
           >
             Volver
           </button>
@@ -1194,6 +1196,7 @@ function App() {
             isYourTurn={isYourTurn}
             onPlayRound={handlePlayRound}
             onPass={handlePass}
+            onBack={handleGameBack}
             message={gameMessage}
             isProcessingBet={isProcessingBet}
           />
