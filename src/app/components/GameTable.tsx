@@ -1,10 +1,13 @@
-import { type GameState } from "../types/game";
+import { useEffect, useRef, useState } from "react";
+import { type Card as GameCard, type GameState } from "../types/game";
 import { PlayerSeat } from "./PlayerSeat";
 import { ControlPanel } from "./ControlPanel";
+import { Card } from "./Card";
 import { formatMoney } from "../utils/deck";
 
 interface GameTableProps {
   gameState: GameState;
+  currentUserId: string;
   timeLeftSeconds: number;
   maxBet: number;
   isYourTurn: boolean;
@@ -17,6 +20,7 @@ interface GameTableProps {
 
 export function GameTable({
   gameState,
+  currentUserId,
   timeLeftSeconds,
   maxBet,
   isYourTurn,
@@ -41,6 +45,43 @@ export function GameTable({
     seatNumber: index + 1,
   }));
   const activePlayer = gameState.players[gameState.currentTurn];
+  const [centerRevealCard, setCenterRevealCard] = useState<GameCard | null>(null);
+  const previousThirdCardsRef = useRef<Map<string, string>>(new Map());
+  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const nextThirdCards = new Map<string, string>();
+    let newestReveal: GameCard | null = null;
+
+    for (const player of gameState.players) {
+      if (!player?.thirdCard) continue;
+      const cardKey = `${player.thirdCard.suit}-${player.thirdCard.value}`;
+      nextThirdCards.set(player.id, cardKey);
+      if (previousThirdCardsRef.current.get(player.id) !== cardKey) {
+        newestReveal = player.thirdCard;
+      }
+    }
+
+    if (newestReveal) {
+      setCenterRevealCard(newestReveal);
+      if (revealTimerRef.current) {
+        clearTimeout(revealTimerRef.current);
+      }
+      revealTimerRef.current = setTimeout(() => {
+        setCenterRevealCard(null);
+      }, 1400);
+    }
+
+    previousThirdCardsRef.current = nextThirdCards;
+  }, [gameState.players]);
+
+  useEffect(() => {
+    return () => {
+      if (revealTimerRef.current) {
+        clearTimeout(revealTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <section className="relative h-[100dvh] overflow-hidden bg-gradient-to-br from-[#173125] to-[#0f1c16] border-y border-[#284736] shadow-[0_10px_25px_rgba(0,0,0,0.35)] sm:h-auto sm:min-h-[580px] sm:rounded-3xl sm:border-2 sm:p-4 md:min-h-[640px] md:p-6 lg:min-h-[700px]">
@@ -62,9 +103,9 @@ export function GameTable({
       </aside>
 
       <div className="relative h-full w-full sm:min-h-[530px] md:min-h-[580px]">
-        <div className="absolute inset-x-[10%] inset-y-[16%] xs:inset-x-[9%] xs:inset-y-[15%] sm:inset-x-[9%] sm:inset-y-[12%] md:inset-x-[11%] md:inset-y-[13%] rounded-[50%/38%] bg-gradient-to-br from-[#2d9a68] via-[#1f6b47] to-[#184d35] border-[8px] sm:border-[10px] md:border-[12px] border-[#5f3f1c] shadow-[inset_0_0_0_3px_rgba(255,255,255,0.12),inset_0_-18px_26px_rgba(0,0,0,0.35),0_16px_35px_rgba(0,0,0,0.45)]" />
+        <div className="absolute inset-x-[6%] inset-y-[10%] xs:inset-x-[6%] xs:inset-y-[10%] sm:inset-x-[9%] sm:inset-y-[12%] md:inset-x-[11%] md:inset-y-[13%] rounded-[50%/38%] bg-gradient-to-br from-[#2d9a68] via-[#1f6b47] to-[#184d35] border-[8px] sm:border-[10px] md:border-[12px] border-[#5f3f1c] shadow-[inset_0_0_0_3px_rgba(255,255,255,0.12),inset_0_-18px_26px_rgba(0,0,0,0.35),0_16px_35px_rgba(0,0,0,0.45)]" />
 
-        <div className="absolute left-1/2 top-[49%] sm:top-1/2 -translate-x-1/2 -translate-y-1/2 text-center w-full px-3 sm:px-4">
+        <div className="absolute left-1/2 top-[46%] sm:top-1/2 -translate-x-1/2 -translate-y-1/2 text-center w-full px-3 sm:px-4">
           <p className="text-white/70 text-[10px] sm:text-xs md:text-sm mb-1">Pozo</p>
           <p
             className="text-white text-xl xs:text-2xl md:text-3xl lg:text-4xl font-bold mb-1.5 sm:mb-2 md:mb-3"
@@ -73,7 +114,7 @@ export function GameTable({
             {formatMoney(gameState.pot)}
           </p>
           <div
-            className="text-2xl xs:text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold opacity-20 sm:opacity-25"
+            className="text-lg xs:text-xl sm:text-4xl md:text-5xl lg:text-6xl font-bold opacity-20 sm:opacity-25"
             style={{
               fontFamily: "serif",
               color: "#9fe2be",
@@ -92,8 +133,15 @@ export function GameTable({
             seatNumber={seat.seatNumber}
             isCurrentTurn={seat.player?.id === activePlayer?.id}
             timeLeftSeconds={seat.player?.id === activePlayer?.id ? timeLeftSeconds : 0}
+            isCurrentUser={seat.player?.id === currentUserId}
           />
         ))}
+
+        {centerRevealCard ? (
+          <div className="absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2 scale-[1.25] sm:scale-[1.4] drop-shadow-[0_10px_18px_rgba(0,0,0,0.65)]">
+            <Card card={centerRevealCard} />
+          </div>
+        ) : null}
 
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 sm:translate-x-0 sm:left-auto sm:right-2 sm:bottom-4 md:bottom-6 md:right-6 z-20 w-[280px] sm:w-auto">
           <ControlPanel

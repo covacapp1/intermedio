@@ -474,7 +474,7 @@ function App() {
     autoAdvancedRoundRef.current = gameState.round;
     autoAdvanceTimeoutRef.current = setTimeout(() => {
       handleNextRound();
-    }, 1800);
+    }, 3500);
 
     return () => {
       if (autoAdvanceTimeoutRef.current) {
@@ -1191,6 +1191,7 @@ function App() {
           </button>
           <GameTable
             gameState={gameState}
+            currentUserId={userData.id}
             timeLeftSeconds={timeLeftSeconds}
             maxBet={getMaxBet()}
             isYourTurn={isYourTurn}

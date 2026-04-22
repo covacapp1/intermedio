@@ -8,6 +8,7 @@ interface PlayerSeatProps {
   seatNumber?: number;
   isCurrentTurn?: boolean;
   timeLeftSeconds?: number;
+  isCurrentUser?: boolean;
 }
 
 const positionStyles = {
@@ -16,21 +17,25 @@ const positionStyles = {
   "top-right": "absolute right-[4%] top-[12%] sm:right-[8%] sm:top-[12%] lg:right-[12%]",
   left: "absolute left-[1.5%] top-[38%] sm:left-[4%] lg:left-[5%]",
   right: "absolute right-[1.5%] top-[38%] sm:right-[4%] lg:right-[5%]",
-  bottom: "absolute left-1/2 bottom-[16%] -translate-x-1/2 xs:bottom-[14%] sm:bottom-[7%]",
+  bottom: "absolute left-1/2 bottom-[19%] -translate-x-1/2 xs:bottom-[17%] sm:bottom-[7%]",
 } as const;
 
-export function PlayerSeat({
+function StandardSeat({
   player,
-  position,
   seatNumber,
-  isCurrentTurn = false,
-  timeLeftSeconds = 0,
-}: PlayerSeatProps) {
+  isCurrentTurn,
+  timeLeftSeconds,
+}: {
+  player?: Player;
+  seatNumber?: number;
+  isCurrentTurn: boolean;
+  timeLeftSeconds: number;
+}) {
   const isPlaceholder = !player;
   const isConnected = player ? ("connected" in player ? player.connected : true) : false;
 
   return (
-    <div className={`${positionStyles[position]} flex w-[72px] xs:w-[82px] sm:w-[108px] md:w-[122px] flex-col items-center gap-1 sm:gap-1.5 z-10`}>
+    <>
       <div className="relative">
         {player && isCurrentTurn ? (
           <div className="absolute left-1/2 -top-5 xs:-top-6 -translate-x-1/2 rounded-full border border-[#fff3a3]/70 bg-[#1b2a1f]/90 px-2 py-0.5 text-[9px] xs:text-[10px] sm:text-xs font-bold text-[#fff3a3] shadow-[0_4px_12px_rgba(0,0,0,0.45)] whitespace-nowrap">
@@ -55,7 +60,7 @@ export function PlayerSeat({
             <img src={player.photoUrl} alt={player.name} className="w-full h-full object-cover" />
           ) : (
             <span className={`text-sm xs:text-base sm:text-xl md:text-2xl ${isPlaceholder ? "text-white/35" : ""}`}>
-              {isPlaceholder ? "?" : player?.isAI ? "🤖" : "👤"}
+              {isPlaceholder ? "?" : player?.isAI ? "AI" : "U"}
             </span>
           )}
         </div>
@@ -88,17 +93,12 @@ export function PlayerSeat({
           {player ? formatMoney(player.balance) : "Asiento libre"}
         </p>
         {player && player.bet > 0 ? (
-          <p
-            className="text-white/90 text-[10px] sm:text-xs text-center"
-            style={{ textShadow: "1px 1px 3px rgba(0,0,0,0.8)" }}
-          >
+          <p className="text-white/90 text-[10px] sm:text-xs text-center" style={{ textShadow: "1px 1px 3px rgba(0,0,0,0.8)" }}>
             Apuesta: {formatMoney(player.bet)}
           </p>
         ) : null}
         {player && isCurrentTurn ? (
-          <p className="text-[9px] xs:text-[10px] sm:text-xs font-bold text-[#fff3a3] tracking-[0.15em] uppercase">
-            Su turno
-          </p>
+          <p className="text-[9px] xs:text-[10px] sm:text-xs font-bold text-[#fff3a3] tracking-[0.15em] uppercase">Su turno</p>
         ) : null}
       </div>
 
@@ -106,13 +106,6 @@ export function PlayerSeat({
         {player ? (
           <>
             <Card card={player.cards[0]} />
-            {player.thirdCard ? (
-              <Card card={player.thirdCard} />
-            ) : player.bet > 0 ? (
-              <div className="h-8 w-6 xs:h-9 xs:w-7 sm:h-12 sm:w-8 rounded-md border-2 border-dashed border-[#fff3a3]/50 bg-[#1b2a1f]/40 flex items-center justify-center animate-pulse">
-                <span className="text-[#fff3a3]/60 text-lg font-bold">?</span>
-              </div>
-            ) : null}
             <Card card={player.cards[1]} />
           </>
         ) : (
@@ -137,6 +130,72 @@ export function PlayerSeat({
           {player.result}
         </div>
       ) : null}
+    </>
+  );
+}
+
+export function PlayerSeat({
+  player,
+  position,
+  seatNumber,
+  isCurrentTurn = false,
+  timeLeftSeconds = 0,
+  isCurrentUser = false,
+}: PlayerSeatProps) {
+  const isBottomCurrentUser = position === "bottom" && isCurrentUser;
+
+  if (isBottomCurrentUser) {
+    return (
+      <div className={`${positionStyles[position]} z-20`}>
+        <div className="sm:hidden w-[min(92vw,370px)] rounded-xl border border-[#D4AF37]/60 bg-[#102118]/92 px-2 py-1.5 shadow-[0_8px_22px_rgba(0,0,0,0.55)]">
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              {player && isCurrentTurn ? (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full border border-[#fff3a3]/70 bg-[#1b2a1f]/90 px-1.5 py-0.5 text-[9px] font-bold text-[#fff3a3]">
+                  {timeLeftSeconds}s
+                </div>
+              ) : null}
+              <div className="h-11 w-11 rounded-full border-2 border-[#D4AF37] overflow-hidden bg-[#3d2a18] flex items-center justify-center">
+                {player?.photoUrl ? (
+                  <img src={player.photoUrl} alt={player.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-sm text-white/80">{player?.isAI ? "AI" : "U"}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="min-w-0 rounded-md border border-white/20 bg-black/35 px-2 py-1">
+              <p className="max-w-[120px] truncate text-[11px] font-semibold text-white">{player?.name || `Jugador ${seatNumber ?? ""}`}</p>
+              <p className="text-[11px] font-bold text-[#FFD700]">{player ? formatMoney(player.balance) : "Asiento libre"}</p>
+            </div>
+
+            <div className="ml-auto flex items-center gap-1">
+              <Card card={player?.cards?.[0]} />
+              <Card card={player?.cards?.[1]} />
+            </div>
+          </div>
+        </div>
+
+        <div className="hidden sm:flex w-[72px] xs:w-[82px] sm:w-[108px] md:w-[122px] flex-col items-center gap-1 sm:gap-1.5">
+          <StandardSeat
+            player={player}
+            seatNumber={seatNumber}
+            isCurrentTurn={isCurrentTurn}
+            timeLeftSeconds={timeLeftSeconds}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${positionStyles[position]} flex w-[72px] xs:w-[82px] sm:w-[108px] md:w-[122px] flex-col items-center gap-1 sm:gap-1.5 z-10`}>
+      <StandardSeat
+        player={player}
+        seatNumber={seatNumber}
+        isCurrentTurn={isCurrentTurn}
+        timeLeftSeconds={timeLeftSeconds}
+      />
     </div>
   );
 }
