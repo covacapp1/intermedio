@@ -170,7 +170,7 @@ const randomTableCode = (): string => {
 };
 
 const STARTING_BALANCE = 0;
-const TURN_DURATION_MS = 20000;
+const TURN_DURATION_MS = 30000;
 const DEFAULT_ADMIN_EMAIL = "grafica.covac@hotmail.com";
 const HIGH_VALUE_WITHDRAWAL_INT = 100000;
 

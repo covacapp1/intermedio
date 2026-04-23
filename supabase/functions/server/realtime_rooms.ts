@@ -1314,14 +1314,27 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
           room.current_turn_seat
         );
 
+        // Draw card even on timeout so player can see what they would have gotten
+        let deck = room.deck || [];
+        const [drawnCard, nextDeck] = drawCard(deck);
+        deck = nextDeck;
+        
         await db
           .from("room_players")
           .update({
             bet: 0,
-            third_card: null,
+            third_card: drawnCard,
             result: "Pasa por tiempo",
           })
           .eq("id", currentPlayer.id);
+
+        // Update deck in room
+        await db
+          .from("rooms")
+          .update({
+            deck: deck,
+          })
+          .eq("id", roomId);
 
         await db
           .from("rooms")

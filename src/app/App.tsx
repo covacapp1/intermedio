@@ -58,7 +58,7 @@ const emptyUserData: UserData = {
 };
 
 const isBrowser = typeof window !== "undefined";
-const TURN_DURATION_MS = 20000;
+const TURN_DURATION_MS = 30000;
 const getAuthRedirectUrl = () => {
   if (isBrowser) {
     return `${window.location.origin}/`;
@@ -474,7 +474,7 @@ function App() {
     autoAdvancedRoundRef.current = gameState.round;
     autoAdvanceTimeoutRef.current = setTimeout(() => {
       handleNextRound();
-    }, 6000);
+    }, 8000);
 
     return () => {
       if (autoAdvanceTimeoutRef.current) {
