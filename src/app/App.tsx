@@ -474,7 +474,7 @@ function App() {
     autoAdvancedRoundRef.current = gameState.round;
     autoAdvanceTimeoutRef.current = setTimeout(() => {
       handleNextRound();
-    }, 3500);
+    }, 6000);
 
     return () => {
       if (autoAdvanceTimeoutRef.current) {
