@@ -775,7 +775,6 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         deck = nextDeck;
 
         const won = evaluateHand(player.cards[0], player.cards[1], drawnCard);
-        console.log(`Bet processing: userId=${userId}, betAmount=${betAmount}, won=${won}, balanceBefore=${playerBalance}, potBefore=${currentPot}`);
         if (won) {
           // Player wins: recovers bet (no change) + wins betAmount from pot
           nextBalance += betAmount;
@@ -787,7 +786,6 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
           nextPot += betAmount;
           result = `Pierde ${Math.round(betAmount)} INT`;
         }
-        console.log(`Bet processing: balanceAfter=${nextBalance}, potAfter=${nextPot}`);
 
         // If player reaches 0 balance after losing, start rebuy timer
         if (nextBalance === 0 && !won) {
@@ -804,7 +802,6 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
           ? [...baseTurnPlayers, aiStateToTurnPlayer(roomId, room.ai_state)]
           : baseTurnPlayers;
       let nextTurn = getNextPendingTurn(turnPlayers, room.current_turn_seat);
-      console.log(`[BET] Next turn calculation: nextTurn=${nextTurn}, currentTurnSeat=${room.current_turn_seat}`);
 
       let nextAiState = room.ai_state ? { ...room.ai_state } : null;
       let nextDeckForRoom = deck;
@@ -849,17 +846,15 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
           payload: { betAmount: aiBet },
         });
 
-        nextTurn = getNextPendingTurn(
-          [
-            ...baseTurnPlayers,
-            aiStateToTurnPlayer(roomId, nextAiState),
-          ],
-          nextAiState.seat
-        );
+        // Recalculate next turn with updated AI state
+        const updatedTurnPlayers = [
+          ...baseTurnPlayers,
+          aiStateToTurnPlayer(roomId, nextAiState),
+        ];
+        nextTurn = getNextPendingTurn(updatedTurnPlayers, nextAiState.seat);
         nextTurnStartedAt = nextTurn === -1 ? room.turn_started_at : new Date().toISOString();
       }
 
-      console.log(`Updating player: playerId=${player.id}, bet=${betAmount}, balance=${nextBalance}, result=${result}`);
       const updateData: Record<string, unknown> = {
         bet: betAmount,
         third_card: thirdCard,
@@ -875,7 +870,6 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         .from("room_players")
         .update(updateData)
         .eq("id", player.id);
-      console.log(`Player update result:`, playerUpdateResult.error ? playerUpdateResult.error : "Success");
       if (playerUpdateResult.error) {
         return c.json({ error: playerUpdateResult.error.message }, 500);
       }
@@ -887,14 +881,11 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         turn_started_at: nextTurnStartedAt,
         ai_state: nextAiState,
       };
-      console.log(`[BET] Updating room: roomId=${roomId}, potBefore=${currentPot}, potAfter=${nextPotForRoom}, current_turn_seat=${roomUpdateData.current_turn_seat}`);
       const roomUpdateResult = await db
         .from("rooms")
         .update(roomUpdateData)
         .eq("id", roomId);
-      console.log(`[BET] Room update result:`, roomUpdateResult.error ? roomUpdateResult.error : "Success");
       if (roomUpdateResult.error) {
-        console.error(`[BET] Room update failed with data:`, roomUpdateData);
         return c.json({ error: roomUpdateResult.error.message }, 500);
       }
 
