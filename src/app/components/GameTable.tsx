@@ -45,7 +45,7 @@ export function GameTable({
   const activePlayer = gameState.players[gameState.currentTurn];
 
   return (
-    <section className="relative h-[100dvh] overflow-hidden bg-gradient-to-br from-[#173125] to-[#0f1c16] border-y border-[#284736] shadow-[0_10px_25px_rgba(0,0,0,0.35)] sm:h-auto sm:min-h-[580px] sm:rounded-3xl sm:border-2 sm:p-4 md:min-h-[640px] md:p-6 lg:min-h-[700px]">
+    <section className="relative h-screen overflow-hidden bg-gradient-to-br from-[#173125] to-[#0f1c16] border-y border-[#284736] shadow-[0_10px_25px_rgba(0,0,0,0.35)] sm:h-auto sm:min-h-[580px] sm:rounded-3xl sm:border-2 sm:p-4 md:min-h-[640px] md:p-6 lg:min-h-[700px]">
       {onBack ? (
         <button
           onClick={onBack}

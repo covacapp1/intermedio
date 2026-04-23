@@ -1181,8 +1181,8 @@ function App() {
     };
 
     return (
-      <div className="min-h-screen bg-[radial-gradient(circle_at_10%_10%,#1a2d22_0%,transparent_30%),radial-gradient(circle_at_90%_90%,#193126_0%,transparent_35%),#0a0f0d] text-white">
-        <main className="w-full max-w-none mx-auto p-0 sm:max-w-[980px] sm:p-4">
+      <div className="h-screen bg-[radial-gradient(circle_at_10%_10%,#1a2d22_0%,transparent_30%),radial-gradient(circle_at_90%_90%,#193126_0%,transparent_35%),#0a0f0d] text-white overflow-hidden sm:min-h-screen sm:overflow-auto">
+        <main className="w-full max-w-none mx-auto h-full sm:h-auto sm:max-w-[980px] sm:p-4">
           <button
             onClick={handleGameBack}
             className="mb-3 sm:mb-4 ml-2 mt-2 px-3 sm:px-4 py-2 text-sm sm:text-base bg-[#654321] text-[#F5DEB3] border-2 border-[#D4AF37] rounded hover:bg-[#7d5a2e] transition-colors hidden sm:inline-flex"
