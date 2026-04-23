@@ -6,19 +6,19 @@ interface LobbyProps {
 }
 
 export function Lobby({ onStartTable, message }: LobbyProps) {
-  const [buyIn, setBuyIn] = useState(1000);
+  const [buyIn, setBuyIn] = useState("");
   const [joinCode, setJoinCode] = useState("");
 
   const handlePlayNow = () => {
-    onStartTable("", buyIn);
+    onStartTable("", Number(buyIn) || 0);
   };
 
   const handleCreateTable = () => {
-    onStartTable("CREATE", buyIn);
+    onStartTable("CREATE", Number(buyIn) || 0);
   };
 
   const handleJoinTable = () => {
-    onStartTable(joinCode.trim().toUpperCase(), buyIn);
+    onStartTable(joinCode.trim().toUpperCase(), Number(buyIn) || 0);
   };
 
   return (
@@ -38,7 +38,7 @@ export function Lobby({ onStartTable, message }: LobbyProps) {
           min="100"
           step="100"
           value={buyIn}
-          onChange={(e) => setBuyIn(Number(e.target.value))}
+          onChange={(e) => setBuyIn(e.target.value)}
           className="w-full px-3 py-2 border border-[#2f4f3f] rounded-lg bg-[#0f1f19] text-white focus:outline focus:outline-2 focus:outline-[#3a7d5a]"
         />
       </div>
