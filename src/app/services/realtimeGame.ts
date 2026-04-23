@@ -114,14 +114,26 @@ const supabaseKey =
 const FUNCTION_URL =
   `${((import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim() || `https://${projectId}.supabase.co`)}/functions/v1/server`;
 
+let cachedAccessToken: string | null = null;
+let cachedTokenExpiry: number = 0;
+const TOKEN_CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutos
+
 const authFetch = async <T>(path: string, method: string = "GET", body?: unknown): Promise<ApiResponse<T>> => {
   try {
     const getAccessToken = async () => {
+      const now = Date.now();
+
+      if (cachedAccessToken && cachedTokenExpiry > now) {
+        return cachedAccessToken;
+      }
+
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
       if (session?.access_token) {
+        cachedAccessToken = session.access_token;
+        cachedTokenExpiry = now + TOKEN_CACHE_DURATION_MS;
         return session.access_token;
       }
 
@@ -130,6 +142,8 @@ const authFetch = async <T>(path: string, method: string = "GET", body?: unknown
         return null;
       }
 
+      cachedAccessToken = data.session.access_token;
+      cachedTokenExpiry = now + TOKEN_CACHE_DURATION_MS;
       return data.session.access_token;
     };
 
@@ -294,7 +308,7 @@ const mapRoomToGameTable = (room: RoomRow, players: RoomPlayerRow[]): GameTable 
 const loadRoomRows = async (roomId: string): Promise<ApiResponse<{ room: RoomRow; players: RoomPlayerRow[] }>> => {
   const { data: room, error: roomError } = await supabase
     .from("rooms")
-    .select("*")
+    .select("*, room_players(*, profiles(username, avatar_url))")
     .eq("id", roomId)
     .maybeSingle();
 
@@ -302,24 +316,17 @@ const loadRoomRows = async (roomId: string): Promise<ApiResponse<{ room: RoomRow
     return { error: roomError?.message || "Room not found" };
   }
 
-  const { data: players, error: playersError } = await supabase
-    .from("room_players")
-    .select("*, profiles(username, avatar_url)")
-    .eq("room_id", roomId)
-    .order("seat", { ascending: true });
+  const players = (room as any).room_players || [];
+  const { room_players, ...roomData } = room as any;
 
-  if (playersError) {
-    return { error: playersError.message };
-  }
-
-  return { data: { room: room as RoomRow, players: (players || []) as RoomPlayerRow[] } };
+  return { data: { room: roomData as RoomRow, players: players as RoomPlayerRow[] } };
 };
 
 const loadLobbyTables = async (): Promise<ApiResponse<{ tables: TableInfo[] }>> => {
   const roomsCutoffIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data: rooms, error } = await supabase
     .from("rooms")
-    .select("*")
+    .select("*, room_players(room_id)")
     .in("status", ["waiting", "playing"])
     .gte("created_at", roomsCutoffIso)
     .order("created_at", { ascending: false });
@@ -328,32 +335,25 @@ const loadLobbyTables = async (): Promise<ApiResponse<{ tables: TableInfo[] }>> 
     return { error: error.message };
   }
 
-  const roomIds = (rooms || []).map((room) => room.id);
-  const { data: roomPlayers, error: roomPlayersError } = roomIds.length
-    ? await supabase.from("room_players").select("room_id").in("room_id", roomIds)
-    : { data: [], error: null };
-
-  if (roomPlayersError) {
-    return { error: roomPlayersError.message };
-  }
-
   const playerCountByRoom = new Map<string, number>();
-  for (const row of roomPlayers || []) {
-    playerCountByRoom.set(row.room_id, (playerCountByRoom.get(row.room_id) || 0) + 1);
+  for (const room of rooms || []) {
+    const roomData = room as any;
+    const players = roomData.room_players || [];
+    playerCountByRoom.set(roomData.id, players.length);
   }
 
   return {
     data: {
       tables: (rooms || [])
-        .filter((room) => room.game_mode !== "vs_ai")
+        .filter((room) => (room as any).game_mode !== "vs_ai")
         .map((room) => ({
         id: room.id,
-        name: room.name || `Mesa ${room.code}`,
-        code: room.code,
-        buyIn: Number(room.buy_in),
-        maxPlayers: room.max_players,
+        name: (room as any).name || `Mesa ${(room as any).code}`,
+        code: (room as any).code,
+        buyIn: Number((room as any).buy_in),
+        maxPlayers: (room as any).max_players,
         currentPlayers: playerCountByRoom.get(room.id) || 0,
-        createdAt: new Date(room.created_at).getTime(),
+        createdAt: new Date((room as any).created_at).getTime(),
       })),
     },
   };

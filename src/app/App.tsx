@@ -415,7 +415,7 @@ function App() {
 
       heartbeatIntervalRef.current = setInterval(() => {
         void realtimeGame.heartbeat(currentTableId, userData.id);
-      }, 4000);
+      }, 8000);
 
       return () => {
         gameUnsubscribeRef.current?.();
