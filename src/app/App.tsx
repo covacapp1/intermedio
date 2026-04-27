@@ -157,20 +157,14 @@ function App() {
     const avatarUrl =
       typeof authUser.user_metadata?.avatar_url === "string" ? authUser.user_metadata.avatar_url : "";
 
-    const { data: existingProfile } = await supabase
-      .from("profiles")
-      .select("username, avatar_url, first_name, last_name, dni, email")
-      .eq("id", authUser.id)
-      .maybeSingle();
-
     const profilePayload = {
       id: authUser.id,
-      username: existingProfile?.username || metadataUsername,
-      avatar_url: existingProfile?.avatar_url || avatarUrl || null,
-      first_name: existingProfile?.first_name || metadataFirstName || null,
-      last_name: existingProfile?.last_name || metadataLastName || null,
-      dni: existingProfile?.dni || metadataDni || null,
-      email: existingProfile?.email || email,
+      username: metadataUsername,
+      avatar_url: avatarUrl || null,
+      first_name: metadataFirstName || null,
+      last_name: metadataLastName || null,
+      dni: metadataDni || null,
+      email: email,
     };
 
     const { data: upsertedProfile, error } = await supabase
@@ -183,7 +177,7 @@ function App() {
       console.error("Error syncing profile:", error);
     }
 
-    const profile = upsertedProfile || existingProfile;
+    const profile = upsertedProfile;
 
     const username = profile?.username || metadataUsername;
     const fullName =
