@@ -468,7 +468,7 @@ function App() {
     autoAdvancedRoundRef.current = gameState.round;
     autoAdvanceTimeoutRef.current = setTimeout(() => {
       handleNextRound();
-    }, 8000);
+    }, 12000);
 
     return () => {
       if (autoAdvanceTimeoutRef.current) {
@@ -924,11 +924,17 @@ function App() {
 
     setIsProcessingBet(true);
     console.log(`Making bet: tableId=${currentTableId}, bet=${bet}`);
+    
+    // Optimistic update: show processing state immediately
+    setGameMessage(bet > 0 ? "Procesando apuesta..." : "Pasando...");
+    
     const response = await realtimeGame.makeBet(currentTableId, userData.id, bet);
     console.log(`Bet response:`, response);
     setIsProcessingBet(false);
 
     if (response.data?.table) {
+      // Immediately apply the server response to show the card
+      applyRealtimeTable(response.data.table);
       setGameMessage("Apuesta enviada y procesada");
     } else if (response.error) {
       alert(`Error al procesar apuesta: ${response.error}`);
