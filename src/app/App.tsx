@@ -478,11 +478,8 @@ function App() {
     };
   }, [
     currentView,
-    currentTableId,
     gameState.round,
     gameState.roundResolved,
-    showPotModal,
-    showRebuyModal,
   ]);
 
   const applyRealtimeTable = (serverTable: RealtimeGameTable) => {
