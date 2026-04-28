@@ -1,0 +1,27 @@
+No puedo guardarlo yo mismo para mañana fuera de esta charla, pero podés volver y seguimos desde acá.
+
+Resumen corto para retomar mañana:
+
+Sí necesitás Supabase o algún backend.
+Es porque la clave secreta de Mercado Pago no puede ir en el frontend.
+Tu proyecto ya tiene la lógica hecha para usar Supabase Functions.
+Mañana el paso a paso sería:
+crear o abrir tu proyecto en Supabase,
+conectar este proyecto,
+cargar el MERCADO_PAGO_ACCESS_TOKEN,
+desplegar la función,
+probar el botón Ir a Mercado Pago.
+Si querés, antes de cerrar te dejo un “machete” súper corto en formato checklist para que mañana lo copies y arranquemos desde ahí.No puedo guardarlo yo mismo para mañana fuera de esta charla, pero podés volver y seguimos desde acá.
+
+Resumen corto para retomar mañana:
+
+Sí necesitás Supabase o algún backend.
+Es porque la clave secreta de Mercado Pago no puede ir en el frontend.
+Tu proyecto ya tiene la lógica hecha para usar Supabase Functions.
+Mañana el paso a paso sería:
+crear o abrir tu proyecto en Supabase,
+conectar este proyecto,
+cargar el MERCADO_PAGO_ACCESS_TOKEN,
+desplegar la función,
+probar el botón Ir a Mercado Pago.
+Si querés, antes de cerrar te dejo un “machete” súper corto en formato checklist para que mañana lo copies y arranquemos desde ahí.

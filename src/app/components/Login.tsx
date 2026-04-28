@@ -67,6 +67,11 @@ export function Login({ onLogin, onRegister, isLoading = false, errorMessage = "
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#8B4513] via-[#A0522D] to-[#654321] p-4">
       <div className="w-full max-w-xl">
         <div className="text-center mb-6 sm:mb-8">
+          <img
+            src="/logo.png"
+            alt="Intermedio Logo"
+            className="mx-auto mb-4 max-h-32 sm:max-h-40 md:max-h-48 object-contain"
+          />
           <h1
             className="text-4xl sm:text-5xl md:text-6xl font-bold text-[#F5DEB3] drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] mb-2"
             style={{
