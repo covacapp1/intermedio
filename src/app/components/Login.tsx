@@ -70,18 +70,8 @@ export function Login({ onLogin, onRegister, isLoading = false, errorMessage = "
           <img
             src="/logo.png"
             alt="Intermedio Logo"
-            className="mx-auto mb-4 max-h-32 sm:max-h-40 md:max-h-48 object-contain"
+            className="mx-auto mb-4 max-h-48 sm:max-h-56 md:max-h-64 object-contain"
           />
-          <h1
-            className="text-4xl sm:text-5xl md:text-6xl font-bold text-[#F5DEB3] drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] mb-2"
-            style={{
-              fontFamily: "serif",
-              textShadow: "3px 3px 0 #654321, -1px -1px 0 #654321, 1px -1px 0 #654321, -1px 1px 0 #654321",
-            }}
-          >
-            INTERMEDIO
-          </h1>
-          <p className="text-[#D2B48C] text-base sm:text-lg">Card Game</p>
         </div>
 
         <div
