@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { type Player } from "../types/game";
 import { Card } from "./Card";
 import { formatMoney } from "../utils/deck";
@@ -21,6 +22,39 @@ const positionStyles = {
 } as const;
 
 function PlayerCards({ player }: { player?: Player }) {
+  const previousThirdCardRef = useRef<string | null>(null);
+  const revealTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [highlightThirdCard, setHighlightThirdCard] = useState(false);
+
+  useEffect(() => {
+    const thirdCardKey = player?.thirdCard
+      ? `${player.thirdCard.suit}-${player.thirdCard.value}`
+      : null;
+    const hasNewThirdCard = thirdCardKey && thirdCardKey !== previousThirdCardRef.current;
+
+    if (hasNewThirdCard) {
+      setHighlightThirdCard(true);
+      if (revealTimeoutRef.current) {
+        clearTimeout(revealTimeoutRef.current);
+      }
+      revealTimeoutRef.current = setTimeout(() => {
+        setHighlightThirdCard(false);
+      }, 850);
+    } else if (!thirdCardKey) {
+      setHighlightThirdCard(false);
+    }
+
+    previousThirdCardRef.current = thirdCardKey;
+  }, [player?.thirdCard]);
+
+  useEffect(() => {
+    return () => {
+      if (revealTimeoutRef.current) {
+        clearTimeout(revealTimeoutRef.current);
+      }
+    };
+  }, []);
+
   if (!player) {
     return (
       <>
@@ -34,7 +68,12 @@ function PlayerCards({ player }: { player?: Player }) {
     <>
       <Card card={player.cards[0]} />
       {player.thirdCard ? (
-        <Card card={player.thirdCard} />
+        <div
+          className={highlightThirdCard ? "animate-bounce" : ""}
+          style={highlightThirdCard ? { animationDuration: "0.85s" } : undefined}
+        >
+          <Card card={player.thirdCard} />
+        </div>
       ) : player.bet > 0 ? (
         <div className="h-9 w-7 xs:h-10 xs:w-8 sm:h-12 sm:w-8 rounded-md border-2 border-dashed border-[#fff3a3]/50 bg-[#1b2a1f]/40 flex items-center justify-center animate-pulse">
           <span className="text-[#fff3a3]/60 text-lg font-bold">?</span>
