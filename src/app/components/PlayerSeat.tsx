@@ -22,17 +22,26 @@ const positionStyles = {
 } as const;
 
 function PlayerCards({ player }: { player?: Player }) {
+  const MIN_THIRD_CARD_VISIBLE_MS = 1400;
   const previousThirdCardRef = useRef<string | null>(null);
+  const visibilityLockUntilRef = useRef<number>(0);
+  const displayedThirdCardRef = useRef<Player["thirdCard"]>(null);
   const revealTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [highlightThirdCard, setHighlightThirdCard] = useState(false);
+  const [displayedThirdCard, setDisplayedThirdCard] = useState<Player["thirdCard"]>(player?.thirdCard ?? null);
 
   useEffect(() => {
-    const thirdCardKey = player?.thirdCard
+    const incomingThirdCard = player?.thirdCard ?? null;
+    const thirdCardKey = incomingThirdCard
       ? `${player.thirdCard.suit}-${player.thirdCard.value}`
       : null;
     const hasNewThirdCard = thirdCardKey && thirdCardKey !== previousThirdCardRef.current;
+    const now = Date.now();
 
     if (hasNewThirdCard) {
+      displayedThirdCardRef.current = incomingThirdCard;
+      setDisplayedThirdCard(incomingThirdCard);
+      visibilityLockUntilRef.current = now + MIN_THIRD_CARD_VISIBLE_MS;
       setHighlightThirdCard(true);
       if (revealTimeoutRef.current) {
         clearTimeout(revealTimeoutRef.current);
@@ -40,12 +49,30 @@ function PlayerCards({ player }: { player?: Player }) {
       revealTimeoutRef.current = setTimeout(() => {
         setHighlightThirdCard(false);
       }, 850);
-    } else if (!thirdCardKey) {
-      setHighlightThirdCard(false);
+    } else if (thirdCardKey) {
+      // Keep synced if server sends same third card without being a new reveal event.
+      displayedThirdCardRef.current = incomingThirdCard;
+      setDisplayedThirdCard(incomingThirdCard);
+    } else {
+      // If server clears third card too fast, keep it visible briefly for UX stability.
+      if (now < visibilityLockUntilRef.current && displayedThirdCardRef.current) {
+        if (revealTimeoutRef.current) {
+          clearTimeout(revealTimeoutRef.current);
+        }
+        revealTimeoutRef.current = setTimeout(() => {
+          displayedThirdCardRef.current = null;
+          setDisplayedThirdCard(null);
+          setHighlightThirdCard(false);
+        }, visibilityLockUntilRef.current - now);
+      } else {
+        displayedThirdCardRef.current = null;
+        setDisplayedThirdCard(null);
+        setHighlightThirdCard(false);
+      }
     }
 
     previousThirdCardRef.current = thirdCardKey;
-  }, [player?.thirdCard]);
+  }, [player?.thirdCard, MIN_THIRD_CARD_VISIBLE_MS]);
 
   useEffect(() => {
     return () => {
@@ -67,12 +94,12 @@ function PlayerCards({ player }: { player?: Player }) {
   return (
     <>
       <Card card={player.cards[0]} />
-      {player.thirdCard ? (
+      {displayedThirdCard ? (
         <div
           className={highlightThirdCard ? "animate-bounce" : ""}
           style={highlightThirdCard ? { animationDuration: "0.85s" } : undefined}
         >
-          <Card card={player.thirdCard} />
+          <Card card={displayedThirdCard} />
         </div>
       ) : player.bet > 0 ? (
         <div className="h-9 w-7 xs:h-10 xs:w-8 sm:h-12 sm:w-8 rounded-md border-2 border-dashed border-[#fff3a3]/50 bg-[#1b2a1f]/40 flex items-center justify-center animate-pulse">
