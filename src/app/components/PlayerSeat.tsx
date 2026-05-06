@@ -222,10 +222,9 @@ export function PlayerSeat({
               <p className="max-w-[130px] truncate text-xs font-semibold text-white">{player?.name || `Jugador ${seatNumber ?? ""}`}</p>
               <p className="text-xs font-bold text-[#FFD700]">{player ? formatMoney(player.balance) : "Asiento libre"}</p>
             </div>
-
-            <div className="ml-auto flex items-center gap-1">
-              <PlayerCards player={player} />
-            </div>
+          </div>
+          <div className="mt-2 flex items-center justify-center gap-1.5 rounded-md border border-white/15 bg-black/25 py-1.5">
+            <PlayerCards player={player} />
           </div>
         </div>
 
