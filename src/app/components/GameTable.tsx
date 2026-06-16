@@ -45,7 +45,7 @@ export function GameTable({
   const activePlayer = gameState.players[gameState.currentTurn];
 
   return (
-    <section className="relative h-screen overflow-hidden bg-gradient-to-br from-[#173125] to-[#0f1c16] border-y border-[#284736] shadow-[0_10px_25px_rgba(0,0,0,0.35)] sm:h-auto sm:min-h-[580px] sm:rounded-3xl sm:border-2 sm:p-4 md:min-h-[640px] md:p-6 lg:min-h-[700px]">
+    <section className="relative h-screen overflow-hidden bg-gradient-to-br from-[#173125] to-[#0f1c16] border-y border-[#284736] shadow-[0_10px_25px_rgba(0,0,0,0.35)] sm:h-auto sm:min-h-[640px] sm:rounded-3xl sm:border-2 sm:p-4 md:min-h-[720px] md:p-6 lg:min-h-[780px]">
       {onBack ? (
         <button
           onClick={onBack}
@@ -63,7 +63,7 @@ export function GameTable({
         <p>Turno: <strong>{activePlayer?.name ?? "Esperando..."}</strong></p>
       </aside>
 
-      <div className="relative h-full w-full sm:min-h-[530px] md:min-h-[580px]">
+      <div className="relative h-full w-full sm:min-h-[590px] md:min-h-[660px]">
         <div className="absolute inset-x-[3%] inset-y-[8%] xs:inset-x-[3%] xs:inset-y-[8%] sm:inset-x-[9%] sm:inset-y-[12%] md:inset-x-[11%] md:inset-y-[13%] rounded-[50%/38%] bg-gradient-to-br from-[#2d9a68] via-[#1f6b47] to-[#184d35] border-[8px] sm:border-[10px] md:border-[12px] border-[#5f3f1c] shadow-[inset_0_0_0_3px_rgba(255,255,255,0.12),inset_0_-18px_26px_rgba(0,0,0,0.35),0_16px_35px_rgba(0,0,0,0.45)]" />
 
         <div className="absolute left-1/2 top-[46%] sm:top-1/2 -translate-x-1/2 -translate-y-1/2 text-center w-full px-3 sm:px-4">
