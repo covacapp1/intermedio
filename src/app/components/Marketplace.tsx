@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { IntIcon } from "./IntIcon";
-import { formatInt } from "../utils/economy";
+import { formatInt, formatArs } from "../utils/economy";
 
 interface MarketplaceProps {
   userBalance: number;
   onBack: () => void;
+  onDeposit: (amount: number) => Promise<void>;
 }
 
 const PACKAGES = [
@@ -14,7 +16,18 @@ const PACKAGES = [
   { amount: 20000, label: "20.000 INT", color: "from-[#FFD700] to-[#FFDF4F]" },
 ];
 
-export function Marketplace({ userBalance, onBack }: MarketplaceProps) {
+export function Marketplace({ userBalance, onBack, onDeposit }: MarketplaceProps) {
+  const [loading, setLoading] = useState(false);
+
+  const handleBuy = async (amount: number) => {
+    setLoading(true);
+    try {
+      await onDeposit(amount);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#8B4513] via-[#A0522D] to-[#654321] p-4 relative overflow-hidden">
       <div
@@ -54,10 +67,12 @@ export function Marketplace({ userBalance, onBack }: MarketplaceProps) {
           {PACKAGES.map((pkg) => (
             <button
               key={pkg.amount}
-              disabled
-              className={`w-full py-4 sm:py-5 bg-gradient-to-b ${pkg.color} text-[#3E2723] font-bold text-lg sm:text-xl border-4 border-[#654321] rounded-lg shadow-[0_6px_16px_rgba(0,0,0,0.5)] opacity-60 cursor-not-allowed relative overflow-hidden`}
+              onClick={() => handleBuy(pkg.amount)}
+              disabled={loading}
+              className={`w-full py-4 sm:py-5 bg-gradient-to-b ${pkg.color} text-[#3E2723] font-bold text-lg sm:text-xl border-4 border-[#654321] rounded-lg shadow-[0_6px_16px_rgba(0,0,0,0.5)] hover:from-[#FFD700] hover:to-[#FFDF4F] transition-all transform hover:scale-[1.02] active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed relative overflow-hidden group`}
               style={{ fontFamily: "serif" }}
             >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 group-hover:translate-x-full transition-transform duration-700" />
               <div className="absolute top-1 left-1 w-3 h-3 border-t-2 border-l-2 border-[#3E2723]" />
               <div className="absolute top-1 right-1 w-3 h-3 border-t-2 border-r-2 border-[#3E2723]" />
               <div className="absolute bottom-1 left-1 w-3 h-3 border-b-2 border-l-2 border-[#3E2723]" />
@@ -65,13 +80,14 @@ export function Marketplace({ userBalance, onBack }: MarketplaceProps) {
               <span className="relative z-10 flex items-center justify-center gap-2">
                 <IntIcon className="h-5 w-5 text-[12px] text-[#3E2723]" />
                 {pkg.label}
+                <span className="text-sm font-normal opacity-70">({formatArs(pkg.amount)})</span>
               </span>
             </button>
           ))}
         </div>
 
         <p className="text-center text-[#D2B48C]/70 text-xs mt-6">
-          Próximamente habilitaremos las compras
+          1 ARS = 1 INT. Pago seguro por Mercado Pago.
         </p>
       </div>
     </div>

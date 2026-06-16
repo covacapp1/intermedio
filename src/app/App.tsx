@@ -1159,6 +1159,7 @@ function App() {
       <Marketplace
         userBalance={userData.balance}
         onBack={handleBackToHome}
+        onDeposit={handleDeposit}
       />
     );
   }
