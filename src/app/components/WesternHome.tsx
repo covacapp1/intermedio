@@ -91,7 +91,7 @@ export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogo
         <p>
           © 2026{" "}
           <a
-            href="https://covacapp.com"
+            href="https://covacweb.vercel.app/"
             target="_blank"
             rel="noreferrer"
             className="font-semibold underline decoration-[#D4AF37] underline-offset-4 transition-colors hover:text-white"
