@@ -59,7 +59,7 @@ const emptyUserData: UserData = {
 
 const isBrowser = typeof window !== "undefined";
 const TURN_DURATION_MS = 30000;
-const ROUND_AUTO_ADVANCE_DELAY_MS = 5000;
+const ROUND_AUTO_ADVANCE_DELAY_MS = 3000;
 const getAuthRedirectUrl = () => {
   if (isBrowser) {
     return `${window.location.origin}/`;
@@ -424,7 +424,11 @@ function App() {
 
   useEffect(() => {
     if (currentView !== "game" || gameState.roundResolved || !gameState.turnStartedAt) {
-      setTimeLeftSeconds(20);
+      if (isProcessingBet) {
+        setTimeLeftSeconds(0);
+      } else {
+        setTimeLeftSeconds(20);
+      }
       return;
     }
 
@@ -538,19 +542,28 @@ function App() {
     }
 
     if (serverTable.roundResolved && !gameState.roundResolved) {
-      if (serverTable.pot <= 0) {
+      const you = serverTable.players.find((p) => p.id === userData.id);
+      if (you?.result) {
+        setGameMessage(`Ronda finalizada. ${you.result}. Pozo: ${formatMoney(serverTable.pot)}.`);
+      } else if (serverTable.pot <= 0) {
         setGameMessage("El pozo llego a $0.");
         setShowPotModal(true);
       } else {
         setGameMessage(`Ronda ${serverTable.round} finalizada. Pozo actual: ${formatMoney(serverTable.pot)}.`);
       }
+      void refreshWallet(userData.id, userData.email);
     } else if (!serverTable.roundResolved && serverTable.status === "playing") {
       const activePlayer = serverTable.players[serverTable.currentTurn];
-      setGameMessage(
-        activePlayer?.id === userData.id
-          ? "Es tu turno. Decide tu apuesta antes de que termine el reloj."
-          : `Turno de ${activePlayer?.name ?? "otro jugador"}.`
-      );
+      const youJustActed = serverTable.players.find((p) => p.id === userData.id);
+      if (youJustActed && youJustActed.bet >= 0 && youJustActed.result) {
+        setGameMessage(`${youJustActed.result}. Turno de ${activePlayer?.name ?? "otro jugador"}.`);
+      } else {
+        setGameMessage(
+          activePlayer?.id === userData.id
+            ? "Es tu turno. Decide tu apuesta antes de que termine el reloj."
+            : `Turno de ${activePlayer?.name ?? "otro jugador"}.`
+        );
+      }
     }
   };
 
@@ -921,24 +934,22 @@ function App() {
     }
 
     setIsProcessingBet(true);
-    console.log(`Making bet: tableId=${currentTableId}, bet=${bet}`);
     
-    // Optimistic update: show processing state immediately
-    setGameMessage(bet > 0 ? "Procesando apuesta..." : "Pasando...");
+    setGameState((prev) => ({ ...prev, turnStartedAt: 0 }));
+
+    if (bet === 0) {
+      setGameMessage("Pasando...");
+    } else {
+      setGameMessage("Procesando apuesta...");
+    }
     
     const response = await realtimeGame.makeBet(currentTableId, userData.id, bet);
-    console.log(`Bet response:`, response);
     setIsProcessingBet(false);
 
     if (response.data?.table) {
-      // Immediately apply the server response to show the card
       applyRealtimeTable(response.data.table);
-      setGameMessage("Apuesta enviada y procesada");
     } else if (response.error) {
-      alert(`Error al procesar apuesta: ${response.error}`);
-    } else {
-      setGameMessage("Error: Respuesta del servidor incompleta");
-      console.error("Invalid response:", response);
+      setGameMessage(`Error: ${response.error}`);
     }
   };
 
