@@ -807,10 +807,38 @@ function App() {
     if (userData.id) {
       const [firstName = "", ...restName] = (profileData.fullName || "").trim().split(/\s+/);
       const lastName = restName.join(" ");
+
+      let avatarUrl = profileData.photoUrl || null;
+
+      // If photoUrl is a base64 data URL, upload to Supabase Storage
+      if (avatarUrl && avatarUrl.startsWith("data:")) {
+        try {
+          const res = await fetch(avatarUrl);
+          const blob = await res.blob();
+          const fileExt = blob.type.split("/")[1] || "png";
+          const filePath = `${userData.id}/avatar.${fileExt}`;
+
+          const { error: uploadError } = await supabase.storage
+            .from("avatars")
+            .upload(filePath, blob, { upsert: true });
+
+          if (uploadError) {
+            console.error("Avatar upload error:", uploadError);
+          } else {
+            const { data: urlData } = supabase.storage
+              .from("avatars")
+              .getPublicUrl(filePath);
+            avatarUrl = urlData.publicUrl;
+          }
+        } catch (e) {
+          console.error("Failed to upload avatar:", e);
+        }
+      }
+
       const { error } = await supabase.from("profiles").upsert({
         id: userData.id,
         username: profileData.username || userData.email.split("@")[0] || "Jugador",
-        avatar_url: profileData.photoUrl || null,
+        avatar_url: avatarUrl,
         first_name: firstName || null,
         last_name: lastName || null,
         dni: profileData.dni || null,
@@ -821,6 +849,9 @@ function App() {
         alert("No pudimos guardar el perfil en Supabase.");
         return;
       }
+
+      // Update local state with the Storage URL (not base64)
+      profileData = { ...profileData, photoUrl: avatarUrl || "" };
     }
 
     setUserData((previous) => ({
