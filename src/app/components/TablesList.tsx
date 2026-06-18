@@ -1,6 +1,5 @@
 import { Clock, DollarSign, Search, Users } from "lucide-react";
 import { useMemo, useState } from "react";
-import { MultiplayerHelp } from "./MultiplayerHelp";
 import { formatInt } from "../utils/economy";
 
 export interface TableInfo {
@@ -20,7 +19,6 @@ interface TablesListProps {
 }
 
 export function TablesList({ tables, onJoinTable, onBack }: TablesListProps) {
-  const [showHelp, setShowHelp] = useState(false);
   const [searchCode, setSearchCode] = useState("");
 
   const availableTables = useMemo(() => {
@@ -55,18 +53,6 @@ export function TablesList({ tables, onJoinTable, onBack }: TablesListProps) {
             LOBBY
           </h1>
           <p className="text-lg text-[#D2B48C]">Busca por codigo o entra a una mesa disponible</p>
-          <div className="mt-4 inline-flex items-center gap-2 rounded-lg border-2 border-green-600/50 bg-green-600/20 px-4 py-2">
-            <div className="h-2 w-2 animate-pulse rounded-full bg-green-500"></div>
-            <span className="font-semibold text-green-400">Multijugador en tiempo real</span>
-          </div>
-          <div className="mt-3">
-            <button
-              onClick={() => setShowHelp(true)}
-              className="text-sm text-[#D4AF37] underline transition-colors hover:text-[#FFD700]"
-            >
-              Como funciona el multijugador
-            </button>
-          </div>
         </div>
 
         <div
@@ -118,8 +104,6 @@ export function TablesList({ tables, onJoinTable, onBack }: TablesListProps) {
           </p>
         </div>
       </div>
-
-      <MultiplayerHelp isOpen={showHelp} onClose={() => setShowHelp(false)} />
     </div>
   );
 }
