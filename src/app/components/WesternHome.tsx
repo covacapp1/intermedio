@@ -7,7 +7,7 @@ interface WesternHomeProps {
   userName: string;
   userBalance: number;
   isAdmin: boolean;
-  onNavigate: (view: "profile" | "tables" | "createTable" | "cashier" | "ads" | "admin" | "marketplace") => void;
+  onNavigate: (view: "profile" | "tables" | "createTable" | "cashier" | "ads" | "admin" | "marketplace" | "terms") => void;
   onLogout: () => void;
 }
 
@@ -100,6 +100,14 @@ export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogo
             covacApp
           </a>
           . All rights reserved.
+        </p>
+        <p className="mt-2">
+          <button
+            onClick={() => onNavigate("terms")}
+            className="underline decoration-[#D4AF37] underline-offset-4 transition-colors hover:text-white"
+          >
+            Terminos y Condiciones
+          </button>
         </p>
       </footer>
 

@@ -14,6 +14,7 @@ import { RebuyModal } from "./components/RebuyModal";
 import { AdminWithdrawals } from "./components/AdminWithdrawals";
 import { AdminIntManager } from "./components/AdminIntManager";
 import { Marketplace } from "./components/Marketplace";
+import { Terms } from "./components/Terms";
 import { type GameState } from "./types/game";
 import { formatMoney } from "./utils/deck";
 import { api } from "./services/api";
@@ -28,7 +29,7 @@ import {
   type WithdrawalMethod,
 } from "./types/wallet";
 
-type AppView = "login" | "home" | "profile" | "tables" | "cashier" | "ads" | "game" | "admin" | "admin-int" | "marketplace";
+type AppView = "login" | "home" | "profile" | "tables" | "cashier" | "ads" | "game" | "admin" | "admin-int" | "marketplace" | "terms";
 
 interface UserData {
   id: string;
@@ -689,7 +690,7 @@ function App() {
     setAuthError("");
   };
 
-  const handleNavigate = (view: "profile" | "tables" | "createTable" | "cashier" | "ads" | "admin" | "admin-int" | "marketplace") => {
+  const handleNavigate = (view: "profile" | "tables" | "createTable" | "cashier" | "ads" | "admin" | "admin-int" | "marketplace" | "terms") => {
     if (view === "tables") {
       setCurrentView("tables");
     } else if (view === "createTable") {
@@ -1162,6 +1163,10 @@ function App() {
         onDeposit={handleDeposit}
       />
     );
+  }
+
+  if (currentView === "terms") {
+    return <Terms onBack={handleBackToHome} />;
   }
 
   if (currentView === "tables") {
