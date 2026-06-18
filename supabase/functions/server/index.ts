@@ -491,7 +491,11 @@ app.use("*", logger(console.log));
 app.use(
   "/*",
   cors({
-    origin: "*",
+    origin: [
+      "https://intermedio-ten.vercel.app",
+      "http://localhost:5173",
+      "http://localhost:3000",
+    ],
     allowHeaders: ["Content-Type", "Authorization", "apikey"],
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     exposeHeaders: ["Content-Length"],
@@ -527,12 +531,19 @@ app.get("/server/tables", async (c) => {
 
 app.post("/server/tables", async (c) => {
   try {
-    const body = await c.req.json();
-    const { tableName, buyIn, maxPlayers, userId, userName, userPhoto } = body;
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
 
-    if (!tableName || !buyIn || !userId || !userName) {
+    const body = await c.req.json();
+    const { tableName, buyIn, maxPlayers, userName, userPhoto } = body;
+
+    if (!tableName || !buyIn || !userName) {
       return c.json({ error: "Missing required fields" }, 400);
     }
+
+    const userId = auth.user.id;
 
     const tableId = `table:${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
     const newTable: GameTable = {
@@ -578,11 +589,17 @@ app.post("/server/tables", async (c) => {
 
 app.post("/server/tables/:tableId/join", async (c) => {
   try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
     const tableId = `table:${c.req.param("tableId")}`;
     const body = await c.req.json();
-    const { userId, userName, userPhoto } = body;
+    const { userName, userPhoto } = body;
+    const userId = auth.user.id;
 
-    if (!userId || !userName) {
+    if (!userName) {
       return c.json({ error: "Missing user info" }, 400);
     }
 
@@ -645,6 +662,11 @@ app.post("/server/tables/:tableId/join", async (c) => {
 
 app.get("/server/tables/:tableId", async (c) => {
   try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
     const tableId = `table:${c.req.param("tableId")}`;
     const table = await kv.get(tableId) as GameTable | null;
 
@@ -664,9 +686,15 @@ app.get("/server/tables/:tableId", async (c) => {
 
 app.post("/server/tables/:tableId/bet", async (c) => {
   try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
     const tableId = `table:${c.req.param("tableId")}`;
     const body = await c.req.json();
-    const { userId, betAmount } = body;
+    const { betAmount } = body;
+    const userId = auth.user.id;
 
     const table = await kv.get(tableId) as GameTable | null;
     if (!table) {
@@ -730,6 +758,11 @@ app.post("/server/tables/:tableId/bet", async (c) => {
 
 app.post("/server/tables/:tableId/next-round", async (c) => {
   try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
     const tableId = `table:${c.req.param("tableId")}`;
     const table = await kv.get(tableId) as GameTable | null;
 
@@ -779,9 +812,13 @@ app.post("/server/tables/:tableId/next-round", async (c) => {
 
 app.post("/server/tables/:tableId/leave", async (c) => {
   try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
     const tableId = `table:${c.req.param("tableId")}`;
-    const body = await c.req.json();
-    const { userId } = body;
+    const userId = auth.user.id;
 
     const table = await kv.get(tableId) as GameTable | null;
     if (!table) {
@@ -807,9 +844,13 @@ app.post("/server/tables/:tableId/leave", async (c) => {
 
 app.post("/server/tables/:tableId/heartbeat", async (c) => {
   try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
     const tableId = `table:${c.req.param("tableId")}`;
-    const body = await c.req.json();
-    const { userId } = body;
+    const userId = auth.user.id;
 
     const table = await kv.get(tableId) as GameTable | null;
     if (!table) {
@@ -869,6 +910,17 @@ app.post("/server/wallet/transactions", async (c) => {
     const forbiddenResponse = ensureSameUser(c, auth.user, userId, email);
     if (forbiddenResponse) {
       return forbiddenResponse;
+    }
+
+    // Security: non-admin users can only DEBIT (spend), never CREDIT (self-fund)
+    const isAdminUser = auth.user.email === getAdminEmail();
+    if (direction === "credit" && !isAdminUser) {
+      return c.json({ error: "Forbidden: only admin can credit balances" }, 403);
+    }
+
+    // Security: block self-adjustments of kind "adjustment" for non-admin
+    if (kind === "adjustment" && !isAdminUser) {
+      return c.json({ error: "Forbidden: only admin can make adjustments" }, 403);
     }
 
     const wallet = await getWallet(auth.user.id, auth.user.email);

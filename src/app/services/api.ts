@@ -820,11 +820,10 @@ export const api = {
     userPhoto?: string
   ): Promise<ApiResponse<{ table: GameTable }>> => {
     return withLocalFallback(
-      () => apiCall('/tables', 'POST', {
+      () => apiCallAuthenticated('/tables', 'POST', {
         tableName,
         buyIn,
         maxPlayers,
-        userId,
         userName,
         userPhoto,
       }),
@@ -841,8 +840,7 @@ export const api = {
   ): Promise<ApiResponse<{ table: GameTable }>> => {
     const cleanTableId = tableId.replace('table:', '');
     return withLocalFallback(
-      () => apiCall(`/tables/${cleanTableId}/join`, 'POST', {
-        userId,
+      () => apiCallAuthenticated(`/tables/${cleanTableId}/join`, 'POST', {
         userName,
         userPhoto,
       }),
@@ -867,8 +865,7 @@ export const api = {
   ): Promise<ApiResponse<{ table: GameTable }>> => {
     const cleanTableId = tableId.replace('table:', '');
     return withLocalFallback(
-      () => apiCall(`/tables/${cleanTableId}/bet`, 'POST', {
-        userId,
+      () => apiCallAuthenticated(`/tables/${cleanTableId}/bet`, 'POST', {
         betAmount,
       }),
       () => localApi.makeBet(tableId, userId, betAmount)
@@ -879,7 +876,7 @@ export const api = {
   nextRound: async (tableId: string): Promise<ApiResponse<{ table: GameTable }>> => {
     const cleanTableId = tableId.replace('table:', '');
     return withLocalFallback(
-      () => apiCall(`/tables/${cleanTableId}/next-round`, 'POST'),
+      () => apiCallAuthenticated(`/tables/${cleanTableId}/next-round`, 'POST'),
       () => localApi.nextRound(tableId)
     );
   },
@@ -888,7 +885,7 @@ export const api = {
   leaveTable: async (tableId: string, userId: string): Promise<ApiResponse<{ success: boolean }>> => {
     const cleanTableId = tableId.replace('table:', '');
     return withLocalFallback(
-      () => apiCall(`/tables/${cleanTableId}/leave`, 'POST', { userId }),
+      () => apiCallAuthenticated(`/tables/${cleanTableId}/leave`, 'POST'),
       () => localApi.leaveTable(tableId, userId)
     );
   },
@@ -897,7 +894,7 @@ export const api = {
   heartbeat: async (tableId: string, userId: string): Promise<ApiResponse<{ success: boolean }>> => {
     const cleanTableId = tableId.replace('table:', '');
     return withLocalFallback(
-      () => apiCall(`/tables/${cleanTableId}/heartbeat`, 'POST', { userId }),
+      () => apiCallAuthenticated(`/tables/${cleanTableId}/heartbeat`, 'POST'),
       () => localApi.heartbeat(tableId, userId)
     );
   },
