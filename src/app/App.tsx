@@ -160,15 +160,19 @@ function App() {
     const avatarUrl =
       typeof authUser.user_metadata?.avatar_url === "string" ? authUser.user_metadata.avatar_url : "";
 
-    const profilePayload = {
+    const profilePayload: Record<string, unknown> = {
       id: authUser.id,
       username: metadataUsername,
-      avatar_url: avatarUrl || null,
       first_name: metadataFirstName || null,
       last_name: metadataLastName || null,
       dni: metadataDni || null,
       email: email,
     };
+
+    // Only set avatar_url from metadata if it exists; don't overwrite a Storage URL
+    if (avatarUrl) {
+      profilePayload.avatar_url = avatarUrl;
+    }
 
     const { data: upsertedProfile, error } = await supabase
       .from("profiles")
