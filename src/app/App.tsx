@@ -3,6 +3,7 @@ import { Login, type RegisterFormData } from "./components/Login";
 import { WesternHome } from "./components/WesternHome";
 import { Cashier } from "./components/Cashier";
 import { Ads } from "./components/Ads";
+import { sounds } from "./utils/sounds";
 import { Profile } from "./components/Profile";
 import { TablesList } from "./components/TablesList";
 import { CreateTableModal } from "./components/CreateTableModal";
@@ -550,6 +551,12 @@ function App() {
     if (serverTable.roundResolved && !gameState.roundResolved) {
       const you = serverTable.players.find((p) => p.id === userData.id);
       if (you?.result) {
+        const resultText = you.result.toLowerCase();
+        if (resultText.includes("ganaste") || resultText.includes("win")) {
+          sounds.win();
+        } else if (resultText.includes("perdiste") || resultText.includes("lose")) {
+          sounds.lose();
+        }
         setGameMessage(`Ronda finalizada. ${you.result}. Pozo: ${formatMoney(serverTable.pot)}.`);
       } else if (serverTable.pot <= 0) {
         setGameMessage("El pozo llego a $0.");
@@ -564,8 +571,12 @@ function App() {
       if (youJustActed && youJustActed.bet >= 0 && youJustActed.result) {
         setGameMessage(`${youJustActed.result}. Turno de ${activePlayer?.name ?? "otro jugador"}.`);
       } else {
+        const isMyTurn = activePlayer?.id === userData.id;
+        if (isMyTurn) {
+          sounds.turnStart();
+        }
         setGameMessage(
-          activePlayer?.id === userData.id
+          isMyTurn
             ? "Es tu turno. Decide tu apuesta antes de que termine el reloj."
             : `Turno de ${activePlayer?.name ?? "otro jugador"}.`
         );
@@ -976,8 +987,10 @@ function App() {
 
     if (bet === 0) {
       setGameMessage("Pasando...");
+      sounds.pass();
     } else {
       setGameMessage("Procesando apuesta...");
+      sounds.bet();
     }
     
     const response = await realtimeGame.makeBet(currentTableId, userData.id, bet);
@@ -1002,6 +1015,7 @@ function App() {
     const response = await realtimeGame.nextRound(currentTableId);
 
     if (response.data) {
+      sounds.cardDeal();
       setGameMessage(`Iniciando ronda ${response.data.table.round}...`);
     } else {
       alert(`Error al iniciar siguiente ronda: ${response.error}`);
