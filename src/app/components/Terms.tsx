@@ -72,7 +72,16 @@ export function Terms({ onBack }: TermsProps) {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-[#D4AF37] mb-2">4. Ausencia de Ganancias Economicas</h2>
+              <h2 className="text-lg font-bold text-[#D4AF37] mb-2">4. Uso Responsable</h2>
+              <p>
+                Intermedio Game promueve el entretenimiento saludable. Nuestro juego utiliza unicamente fichas
+                virtuales sin valor monetario real. No promovemos apuestas con dinero real ni el juego compulsivo.
+                El Usuario se compromete a utilizar la Plataforma de manera responsable y moderada.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-bold text-[#D4AF37] mb-2">5. Ausencia de Ganancias Economicas</h2>
               <p>
                 La Plataforma NO ofrece ni garantiza la posibilidad de obtener ganancias economicas, premios,
                 recompensas ni beneficios de ningun tipo, ya sea en dinero, bienes o servicios, a partir de
@@ -88,7 +97,7 @@ export function Terms({ onBack }: TermsProps) {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-[#D4AF37] mb-2">5. Elegibilidad y Responsabilidades</h2>
+              <h2 className="text-lg font-bold text-[#D4AF37] mb-2">6. Elegibilidad y Responsabilidades</h2>
               <p>
                 El uso de la Plataforma esta reservado a personas humanas mayores de dieciocho (18) anos de edad
                 o mayores de edad segun la legislacion aplicable en su jurisdiccion. El Usuario es responsable
@@ -102,7 +111,7 @@ export function Terms({ onBack }: TermsProps) {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-[#D4AF37] mb-2">6. Proteccion de Datos Personales</h2>
+              <h2 className="text-lg font-bold text-[#D4AF37] mb-2">7. Proteccion de Datos Personales</h2>
               <p>
                 Los datos personales proporcionados por los Usuarios seran tratados de conformidad con la
                 Ley N. 25.326 de Proteccion de Datos Personales (Argentina) y su reglamentacion. La informacion
@@ -113,10 +122,11 @@ export function Terms({ onBack }: TermsProps) {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-[#D4AF37] mb-2">7. Limitacion de Responsabilidad</h2>
+              <h2 className="text-lg font-bold text-[#D4AF37] mb-2">8. Limitaciones de Responsabilidad</h2>
               <p>
-                Los propietarios, desarrolladores y operadores de la Plataforma no asumen responsabilidad
-                alguna por:
+                Intermedio Game se proporciona "tal como esta" sin garantias de ningun tipo. No nos hacemos
+                responsables de interrupciones del servicio, perdidas de datos, o decisiones tomadas basandose
+                en nuestro contenido.
               </p>
               <ul className="list-disc list-inside mt-2 space-y-1 ml-4">
                 <li>Interrupciones, errores, fallos o indisponibilidades temporales de la Plataforma.</li>
@@ -127,7 +137,22 @@ export function Terms({ onBack }: TermsProps) {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-[#D4AF37] mb-2">8. Modificaciones</h2>
+              <h2 className="text-lg font-bold text-[#D4AF37] mb-2">9. Propiedad Intelectual</h2>
+              <p>
+                Todo el contenido de la Plataforma esta protegido por derechos de autor. Puedes usar nuestro
+                servicio para entretenimiento personal, pero no puedes reproducir o distribuir nuestro contenido
+                sin autorizacion.
+              </p>
+              <p className="mt-2">
+                Los nombres, logos, graficos, diseños, codigos fuente y demales elementos distintivos de la
+                Plataforma son propiedad exclusiva de sus desarrolladores y estan protegidos por las leyes de
+                propiedad intelectual aplicables. Queda prohibida su reproduccion, distribucion, comunicacion
+                publica o transformacion sin autorizacion expresa.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-bold text-[#D4AF37] mb-2">10. Modificaciones</h2>
               <p>
                 Los operadores de la Plataforma se reservan el derecho de modificar, actualizar o complementar
                 los presentes Terminos y Condiciones en cualquier momento y sin previo aviso. Las modificaciones
@@ -137,7 +162,7 @@ export function Terms({ onBack }: TermsProps) {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-[#D4AF37] mb-2">9. Ley Aplicable y Jurisdiccion</h2>
+              <h2 className="text-lg font-bold text-[#D4AF37] mb-2">11. Ley Aplicable y Jurisdiccion</h2>
               <p>
                 Los presentes Terminos y Condiciones se rigen por las leyes de la Republica Argentina.
                 Cualquier controversia derivada de la interpretacion o aplicacion de los mismos sera sometida
@@ -147,7 +172,7 @@ export function Terms({ onBack }: TermsProps) {
             </section>
 
             <section>
-              <h2 className="text-lg font-bold text-[#D4AF37] mb-2">10. Disposiciones Finales</h2>
+              <h2 className="text-lg font-bold text-[#D4AF37] mb-2">12. Disposiciones Finales</h2>
               <p>
                 Si cualquier clausula de los presentes Terminos y Condiciones fuere declarada nula o inaplicable,
                 las demas clausulas mantendran plena vigencia y efecto. La renuncia de cualquiera de las partes
