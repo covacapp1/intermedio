@@ -300,6 +300,24 @@ function App() {
     };
   }, []);
 
+  // Unlock AudioContext on first user interaction (required for mobile)
+  useEffect(() => {
+    const unlock = () => {
+      // Trigger sound to unlock audio context on mobile
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      if (ctx.state === "suspended") ctx.resume();
+      ctx.close();
+      document.removeEventListener("touchstart", unlock);
+      document.removeEventListener("click", unlock);
+    };
+    document.addEventListener("touchstart", unlock, { once: true });
+    document.addEventListener("click", unlock, { once: true });
+    return () => {
+      document.removeEventListener("touchstart", unlock);
+      document.removeEventListener("click", unlock);
+    };
+  }, []);
+
   useEffect(() => {
     if (!userData.id || !userData.email) return;
     refreshWallet(userData.id, userData.email);

@@ -1,48 +1,59 @@
-const audioCtx = typeof window !== "undefined" ? new (window.AudioContext || (window as any).webkitAudioContext)() : null;
+let audioCtx: AudioContext | null = null;
+
+function getCtx(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  }
+  if (audioCtx.state === "suspended") {
+    audioCtx.resume();
+  }
+  return audioCtx;
+}
 
 function playTone(frequency: number, duration: number, type: OscillatorType = "sine", volume = 0.3) {
-  if (!audioCtx) return;
-  if (audioCtx.state === "suspended") audioCtx.resume();
+  const ctx = getCtx();
+  if (!ctx) return;
 
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
 
   osc.type = type;
-  osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
-  gain.gain.setValueAtTime(volume, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  osc.frequency.setValueAtTime(frequency, ctx.currentTime);
+  gain.gain.setValueAtTime(volume, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
 
   osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start(audioCtx.currentTime);
-  osc.stop(audioCtx.currentTime + duration);
+  gain.connect(ctx.destination);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + duration);
 }
 
 function playNoise(duration: number, volume = 0.15) {
-  if (!audioCtx) return;
-  if (audioCtx.state === "suspended") audioCtx.resume();
+  const ctx = getCtx();
+  if (!ctx) return;
 
-  const bufferSize = audioCtx.sampleRate * duration;
-  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const bufferSize = ctx.sampleRate * duration;
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
   const data = buffer.getChannelData(0);
   for (let i = 0; i < bufferSize; i++) {
     data[i] = (Math.random() * 2 - 1) * 0.5;
   }
 
-  const source = audioCtx.createBufferSource();
+  const source = ctx.createBufferSource();
   source.buffer = buffer;
 
-  const filter = audioCtx.createBiquadFilter();
+  const filter = ctx.createBiquadFilter();
   filter.type = "highpass";
   filter.frequency.value = 2000;
 
-  const gain = audioCtx.createGain();
-  gain.gain.setValueAtTime(volume, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(volume, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
 
   source.connect(filter);
   filter.connect(gain);
-  gain.connect(audioCtx.destination);
+  gain.connect(ctx.destination);
   source.start();
 }
 
