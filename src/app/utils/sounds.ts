@@ -135,56 +135,87 @@ export const sounds = {
   },
 };
 
-// Background music using Web Audio API
-let bgmOscillators: OscillatorNode[] = [];
-let bgmGains: GainNode[] = [];
+// Background music - Western Saloon style
 let bgmPlaying = false;
 let bgmInterval: ReturnType<typeof setInterval> | null = null;
 
-const westernScale = [262, 294, 330, 349, 392, 440, 494, 523]; // C major
-const bassNotes = [131, 147, 165, 175]; // Low notes
+// Western saloon melody notes (pentatonic minor for that old west feel)
+const saloonMelody = [
+  330, 392, 440, 523, 440, 392, 330, 294,
+  330, 392, 523, 587, 523, 440, 392, 330,
+  294, 330, 392, 330, 294, 262, 294, 330,
+  392, 440, 392, 330, 294, 330, 262, 294,
+];
 
-function playBgmNote() {
+const saloonBass = [
+  165, 196, 220, 196, 165, 147, 165, 196,
+  220, 262, 220, 196, 165, 147, 131, 147,
+];
+
+let melodyIdx = 0;
+let bassIdx = 0;
+
+function playSaloonNote() {
   const ctx = getCtx();
   if (!ctx || !bgmPlaying) return;
 
-  // Melody
-  const noteIdx = Math.floor(Math.random() * westernScale.length);
-  const freq = westernScale[noteIdx];
+  // Melody - piano-like sound
+  const note = saloonMelody[melodyIdx % saloonMelody.length];
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
-  osc.type = "sine";
-  osc.frequency.value = freq;
-  gain.gain.setValueAtTime(0.03, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+  osc.type = "triangle";
+  osc.frequency.value = note;
+  gain.gain.setValueAtTime(0.06, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
   osc.connect(gain);
   gain.connect(ctx.destination);
   osc.start(ctx.currentTime);
-  osc.stop(ctx.currentTime + 0.8);
+  osc.stop(ctx.currentTime + 0.6);
 
-  // Bass (every other note)
-  if (Math.random() > 0.5) {
-    const bassFreq = bassNotes[Math.floor(Math.random() * bassNotes.length)];
-    const bassOsc = ctx.createOscillator();
-    const bassGain = ctx.createGain();
-    bassOsc.type = "triangle";
-    bassOsc.frequency.value = bassFreq;
-    bassGain.gain.setValueAtTime(0.04, ctx.currentTime);
-    bassGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
-    bassOsc.connect(bassGain);
-    bassGain.connect(ctx.destination);
-    bassOsc.start(ctx.currentTime);
-    bassOsc.stop(ctx.currentTime + 1.2);
+  // Harmony note (third above, quieter)
+  if (melodyIdx % 2 === 0) {
+    const harmOsc = ctx.createOscillator();
+    const harmGain = ctx.createGain();
+    harmOsc.type = "sine";
+    harmOsc.frequency.value = note * 1.25;
+    harmGain.gain.setValueAtTime(0.025, ctx.currentTime);
+    harmGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    harmOsc.connect(harmGain);
+    harmGain.connect(ctx.destination);
+    harmOsc.start(ctx.currentTime);
+    harmOsc.stop(ctx.currentTime + 0.5);
   }
+
+  // Bass - every beat
+  const bassNote = saloonBass[bassIdx % saloonBass.length];
+  const bassOsc = ctx.createOscillator();
+  const bassGain = ctx.createGain();
+  bassOsc.type = "sine";
+  bassOsc.frequency.value = bassNote;
+  bassGain.gain.setValueAtTime(0.05, ctx.currentTime);
+  bassGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+  bassOsc.connect(bassGain);
+  bassGain.connect(ctx.destination);
+  bassOsc.start(ctx.currentTime);
+  bassOsc.stop(ctx.currentTime + 0.8);
+
+  // Rhythm - soft strum every 4 notes
+  if (melodyIdx % 4 === 0) {
+    playNoise(0.08, 0.03);
+  }
+
+  melodyIdx++;
+  bassIdx++;
 }
 
 export const bgm = {
   start() {
     if (bgmPlaying) return;
     bgmPlaying = true;
-    // Play a note every 800ms for a relaxed tempo
-    bgmInterval = setInterval(playBgmNote, 800);
-    playBgmNote(); // First note immediately
+    melodyIdx = 0;
+    bassIdx = 0;
+    bgmInterval = setInterval(playSaloonNote, 400);
+    playSaloonNote();
   },
 
   stop() {
