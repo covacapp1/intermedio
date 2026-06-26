@@ -4,6 +4,7 @@ import { WesternHome } from "./components/WesternHome";
 import { Cashier } from "./components/Cashier";
 import { Ads } from "./components/Ads";
 import { sounds } from "./utils/sounds";
+import { SoundControls } from "./components/SoundControls";
 import { Profile } from "./components/Profile";
 import { TablesList } from "./components/TablesList";
 import { CreateTableModal } from "./components/CreateTableModal";
@@ -1310,6 +1311,8 @@ function App() {
           onRebuy={handleRebuy}
           onLeave={handleCloseTable}
         />
+
+        <SoundControls />
       </div>
     );
   }

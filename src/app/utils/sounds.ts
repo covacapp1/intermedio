@@ -1,5 +1,10 @@
 let audioCtx: AudioContext | null = null;
 
+function isMuted(): boolean {
+  if (typeof window === "undefined") return false;
+  return getComputedStyle(document.documentElement).getPropertyValue("--sound-muted").trim() === "1";
+}
+
 function getCtx(): AudioContext | null {
   if (typeof window === "undefined") return null;
   if (!audioCtx) {
@@ -12,6 +17,7 @@ function getCtx(): AudioContext | null {
 }
 
 function playTone(frequency: number, duration: number, type: OscillatorType = "sine", volume = 0.3) {
+  if (isMuted()) return;
   const ctx = getCtx();
   if (!ctx) return;
 
@@ -30,6 +36,7 @@ function playTone(frequency: number, duration: number, type: OscillatorType = "s
 }
 
 function playNoise(duration: number, volume = 0.15) {
+  if (isMuted()) return;
   const ctx = getCtx();
   if (!ctx) return;
 
@@ -59,46 +66,136 @@ function playNoise(duration: number, volume = 0.15) {
 
 export const sounds = {
   cardDeal() {
-    playNoise(0.08, 0.2);
-    setTimeout(() => playTone(800, 0.05, "sine", 0.1), 30);
+    // Realistic card slide + snap
+    playNoise(0.06, 0.3);
+    setTimeout(() => {
+      playTone(2000, 0.02, "sine", 0.2);
+      playNoise(0.03, 0.15);
+    }, 40);
+    setTimeout(() => playTone(1500, 0.03, "sine", 0.1), 70);
   },
 
   cardFlip() {
-    playNoise(0.06, 0.25);
-    playTone(1200, 0.08, "sine", 0.15);
+    // Quick snap sound
+    playNoise(0.04, 0.35);
+    playTone(1800, 0.05, "sine", 0.2);
   },
 
   bet() {
-    playTone(523, 0.1, "sine", 0.25);
-    setTimeout(() => playTone(659, 0.1, "sine", 0.25), 80);
-    setTimeout(() => playTone(784, 0.15, "sine", 0.2), 160);
+    // Poker chip clinking
+    const chipFreqs = [3200, 3800, 4200];
+    chipFreqs.forEach((freq, i) => {
+      setTimeout(() => {
+        playTone(freq, 0.06, "sine", 0.15);
+        playTone(freq * 0.5, 0.08, "triangle", 0.1);
+      }, i * 50);
+    });
+    // Stack sound
+    setTimeout(() => playNoise(0.05, 0.12), 150);
   },
 
   pass() {
-    playTone(400, 0.12, "triangle", 0.15);
-    setTimeout(() => playTone(300, 0.15, "triangle", 0.1), 100);
+    // Soft card slide away
+    playTone(600, 0.15, "sine", 0.1);
+    setTimeout(() => playTone(400, 0.2, "sine", 0.08), 80);
+    setTimeout(() => playNoise(0.04, 0.08), 50);
   },
 
   win() {
-    const notes = [523, 659, 784, 1047];
-    notes.forEach((freq, i) => {
-      setTimeout(() => playTone(freq, 0.2, "sine", 0.25), i * 120);
+    // Winning fanfare
+    const melody = [523, 659, 784, 1047, 784, 1047];
+    melody.forEach((freq, i) => {
+      setTimeout(() => {
+        playTone(freq, 0.15, "sine", 0.2);
+        playTone(freq * 0.5, 0.15, "triangle", 0.1);
+      }, i * 100);
     });
   },
 
   lose() {
-    playTone(300, 0.3, "sawtooth", 0.12);
-    setTimeout(() => playTone(200, 0.4, "sawtooth", 0.1), 200);
+    // Sad descending tone
+    playTone(400, 0.4, "sawtooth", 0.08);
+    setTimeout(() => playTone(300, 0.4, "sawtooth", 0.06), 200);
+    setTimeout(() => playTone(200, 0.5, "sawtooth", 0.05), 400);
   },
 
   turnStart() {
-    playTone(880, 0.08, "sine", 0.2);
-    setTimeout(() => playTone(1100, 0.1, "sine", 0.15), 60);
+    // Attention ping
+    playTone(1200, 0.08, "sine", 0.2);
+    setTimeout(() => playTone(1500, 0.1, "sine", 0.15), 70);
   },
 
   chipCollect() {
-    for (let i = 0; i < 3; i++) {
-      setTimeout(() => playTone(1500 + Math.random() * 500, 0.04, "sine", 0.1), i * 40);
+    // Multiple chip sounds
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => {
+        playTone(2500 + Math.random() * 2000, 0.03, "sine", 0.08);
+      }, i * 30);
     }
+  },
+};
+
+// Background music using Web Audio API
+let bgmOscillators: OscillatorNode[] = [];
+let bgmGains: GainNode[] = [];
+let bgmPlaying = false;
+let bgmInterval: ReturnType<typeof setInterval> | null = null;
+
+const westernScale = [262, 294, 330, 349, 392, 440, 494, 523]; // C major
+const bassNotes = [131, 147, 165, 175]; // Low notes
+
+function playBgmNote() {
+  const ctx = getCtx();
+  if (!ctx || !bgmPlaying) return;
+
+  // Melody
+  const noteIdx = Math.floor(Math.random() * westernScale.length);
+  const freq = westernScale[noteIdx];
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "sine";
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.03, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + 0.8);
+
+  // Bass (every other note)
+  if (Math.random() > 0.5) {
+    const bassFreq = bassNotes[Math.floor(Math.random() * bassNotes.length)];
+    const bassOsc = ctx.createOscillator();
+    const bassGain = ctx.createGain();
+    bassOsc.type = "triangle";
+    bassOsc.frequency.value = bassFreq;
+    bassGain.gain.setValueAtTime(0.04, ctx.currentTime);
+    bassGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
+    bassOsc.connect(bassGain);
+    bassGain.connect(ctx.destination);
+    bassOsc.start(ctx.currentTime);
+    bassOsc.stop(ctx.currentTime + 1.2);
+  }
+}
+
+export const bgm = {
+  start() {
+    if (bgmPlaying) return;
+    bgmPlaying = true;
+    // Play a note every 800ms for a relaxed tempo
+    bgmInterval = setInterval(playBgmNote, 800);
+    playBgmNote(); // First note immediately
+  },
+
+  stop() {
+    bgmPlaying = false;
+    if (bgmInterval) {
+      clearInterval(bgmInterval);
+      bgmInterval = null;
+    }
+  },
+
+  isPlaying() {
+    return bgmPlaying;
   },
 };
