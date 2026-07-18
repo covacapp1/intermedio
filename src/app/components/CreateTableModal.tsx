@@ -13,8 +13,8 @@ interface CreateTableModalProps {
 
 export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
   const [tableName, setTableName] = useState("");
-  const [buyIn, setBuyIn] = useState("1000");
-  const [initialStack, setInitialStack] = useState("2000");
+  const [buyIn, setBuyIn] = useState("");
+  const [initialStack, setInitialStack] = useState("");
   const [maxPlayers, setMaxPlayers] = useState(3);
   const [gameMode, setGameMode] = useState<"pvp" | "vs_ai">("pvp");
 
