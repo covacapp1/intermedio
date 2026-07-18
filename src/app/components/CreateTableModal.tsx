@@ -78,7 +78,8 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
               onChange={(e) => setBuyIn(e.target.value)}
               min="100"
               step="100"
-              className="w-full rounded border-2 border-[#654321] bg-[#D2B48C] px-4 py-3 text-[#3E2723] placeholder-[#8B7355] focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]"
+              placeholder="Ej: 1000"
+              className="w-full rounded border-2 border-[#654321] bg-[#D2B48C] px-4 py-3 text-[#3E2723] placeholder-[#9E9E9E] focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]"
             />
             </div>
 
@@ -93,7 +94,8 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
               onChange={(e) => setInitialStack(e.target.value)}
               min="100"
               step="100"
-              className="w-full rounded border-2 border-[#654321] bg-[#D2B48C] px-4 py-3 text-[#3E2723] placeholder-[#8B7355] focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]"
+              placeholder="Ej: 2000"
+              className="w-full rounded border-2 border-[#654321] bg-[#D2B48C] px-4 py-3 text-[#3E2723] placeholder-[#9E9E9E] focus:outline-none focus:border-[#D4AF37] focus:ring-2 focus:ring-[#D4AF37]"
             />
             </div>
 
