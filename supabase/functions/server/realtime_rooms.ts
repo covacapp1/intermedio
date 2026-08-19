@@ -1103,7 +1103,8 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       const player = players.find((item) => item.user_id === userId);
 
       if (player) {
-        // If player has active rebuy deadline, mark as declined
+        const leavingBalance = Number(player.balance || 0);
+
         if (supportsRebuyColumns && player.rebuy_deadline && player.balance === 0) {
           await db
             .from("room_players")
@@ -1114,6 +1115,25 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
             .eq("id", player.id);
         }
         await db.from("room_players").delete().eq("id", player.id);
+
+        if (leavingBalance > 0 && room.owner_id) {
+          const { data: leavingProfile } = await db
+            .from("profiles")
+            .select("email")
+            .eq("id", userId)
+            .maybeSingle();
+          const leavingEmail = String(leavingProfile?.email || "").trim().toLowerCase();
+          if (leavingEmail) {
+            await recordWalletAdjustment(
+              userId,
+              leavingEmail,
+              leavingBalance,
+              "credit",
+              `Devolucion por salida de mesa ${room.code}`,
+              { source: "leave", roomId }
+            );
+          }
+        }
       }
 
       if (getRoomMode(room) === "vs_ai" && room.ai_state && Number(room.ai_state.balance) > 0 && room.owner_id) {
@@ -1135,16 +1155,52 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
 
       try {
         const refreshed = await loadRoomRows(roomId);
-        const shouldDeleteRoom = refreshed.players.length === 0;
 
-        if (shouldDeleteRoom) {
+        if (refreshed.players.length === 0) {
           await db.from("rooms").delete().eq("id", roomId);
         } else if (refreshed.room.status !== "waiting" && refreshed.players.length < 2) {
+          for (const remainingPlayer of refreshed.players) {
+            const rb = Number(remainingPlayer.balance || 0);
+            if (rb > 0 && room.owner_id) {
+              const { data: rp } = await db
+                .from("profiles")
+                .select("email")
+                .eq("id", remainingPlayer.user_id)
+                .maybeSingle();
+              const rpEmail = String(rp?.email || "").trim().toLowerCase();
+              if (rpEmail) {
+                await recordWalletAdjustment(
+                  remainingPlayer.user_id,
+                  rpEmail,
+                  rb,
+                  "credit",
+                  `Devolucion por fin de mesa ${room.code}`,
+                  { source: "leave_reset", roomId }
+                );
+              }
+            }
+          }
           await db
             .from("rooms")
-            .update({ status: "waiting", round: 0, current_turn_seat: 0, turn_started_at: null, pot: Number(refreshed.room.buy_in), deck: [] })
+            .update({
+              status: "waiting",
+              round: 0,
+              current_turn_seat: 0,
+              turn_started_at: null,
+              pot: Number(refreshed.room.buy_in),
+              deck: [],
+            })
             .eq("id", roomId);
-          await db.from("room_players").delete().eq("room_id", roomId);
+          await db
+            .from("room_players")
+            .update({
+              cards: [],
+              third_card: null,
+              bet: -1,
+              result: "",
+              balance: Number(refreshed.room.buy_in),
+            })
+            .eq("room_id", roomId);
         }
       } catch {
         await db.from("rooms").delete().eq("id", roomId);
