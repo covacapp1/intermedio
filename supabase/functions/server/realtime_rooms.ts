@@ -1135,12 +1135,16 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
 
       try {
         const refreshed = await loadRoomRows(roomId);
-        const shouldDeleteRoom =
-          refreshed.players.length === 0 ||
-          (refreshed.room.status !== "waiting" && refreshed.players.length < 2);
+        const shouldDeleteRoom = refreshed.players.length === 0;
 
         if (shouldDeleteRoom) {
           await db.from("rooms").delete().eq("id", roomId);
+        } else if (refreshed.room.status !== "waiting" && refreshed.players.length < 2) {
+          await db
+            .from("rooms")
+            .update({ status: "waiting", round: 0, current_turn_seat: 0, turn_started_at: null, pot: Number(refreshed.room.buy_in), deck: [] })
+            .eq("id", roomId);
+          await db.from("room_players").delete().eq("room_id", roomId);
         }
       } catch {
         await db.from("rooms").delete().eq("id", roomId);
