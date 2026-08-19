@@ -1094,7 +1094,12 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       const db = serviceClient();
       await cleanupExpiredRooms(db);
       const supportsRebuyColumns = await detectRebuyColumnsSupport(db);
-      const { room, players } = await loadRoomRows(roomId);
+      let room, players;
+      try {
+        ({ room, players } = await loadRoomRows(roomId));
+      } catch {
+        return c.json({ success: true });
+      }
       const player = players.find((item) => item.user_id === userId);
 
       if (player) {
