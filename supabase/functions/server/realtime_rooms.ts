@@ -87,7 +87,7 @@ interface WalletSummary {
 const TURN_DURATION_MS = 20000;
 const ROOM_EXPIRATION_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_AI_NAME = "Sheriff IA";
-const DEFAULT_ADMIN_EMAIL = "grafica.covac@hotmail.com";
+const DEFAULT_ADMIN_EMAIL = "covacapp1@gmail.com";
 let rebuyColumnsSupported: boolean | null = null;
 
 const serviceClient = () =>

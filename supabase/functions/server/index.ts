@@ -171,7 +171,7 @@ const randomTableCode = (): string => {
 
 const STARTING_BALANCE = 10000;
 const TURN_DURATION_MS = 30000;
-const DEFAULT_ADMIN_EMAIL = "grafica.covac@hotmail.com";
+const DEFAULT_ADMIN_EMAIL = "covacapp1@gmail.com";
 const HIGH_VALUE_WITHDRAWAL_INT = 100000;
 
 const createEmptyWallet = (userId: string, email: string): WalletSummary => ({
