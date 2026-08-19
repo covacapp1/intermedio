@@ -165,15 +165,31 @@ function App() {
     const profilePayload: Record<string, unknown> = {
       id: authUser.id,
       username: metadataUsername,
-      first_name: metadataFirstName || null,
-      last_name: metadataLastName || null,
-      dni: metadataDni || null,
       email: email,
     };
 
     // Only set avatar_url from metadata if it exists; don't overwrite a Storage URL
     if (avatarUrl) {
       profilePayload.avatar_url = avatarUrl;
+    }
+
+    const { data: existingProfile } = await supabase
+      .from("profiles")
+      .select("username, avatar_url, first_name, last_name, dni, email")
+      .eq("id", authUser.id)
+      .maybeSingle();
+
+    if (existingProfile) {
+      profilePayload.first_name = existingProfile.first_name || metadataFirstName || null;
+      profilePayload.last_name = existingProfile.last_name || metadataLastName || null;
+      profilePayload.dni = existingProfile.dni || metadataDni || null;
+      if (existingProfile.avatar_url) {
+        profilePayload.avatar_url = existingProfile.avatar_url;
+      }
+    } else {
+      profilePayload.first_name = metadataFirstName || null;
+      profilePayload.last_name = metadataLastName || null;
+      profilePayload.dni = metadataDni || null;
     }
 
     const { data: upsertedProfile, error } = await supabase
