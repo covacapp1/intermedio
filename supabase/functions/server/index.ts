@@ -492,6 +492,7 @@ app.use(
   "/*",
   cors({
     origin: [
+      "https://intermedio-lovat.vercel.app",
       "https://intermedio-ten.vercel.app",
       "http://localhost:5173",
       "http://localhost:3000",
