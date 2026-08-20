@@ -16,6 +16,7 @@ export default defineConfig({
         name: 'Intermedio Cards',
         short_name: 'Intermedio',
         description: 'Juego de cartas español',
+        id: '/',
         start_url: '/',
         scope: '/',
         display: 'standalone',
@@ -23,22 +24,25 @@ export default defineConfig({
         theme_color: '#173125',
         background_color: '#173125',
         prefer_related_applications: false,
+        categories: ['games', 'entertainment'],
         icons: [
           {
             src: 'icon-192.png',
             sizes: '192x192',
-            type: 'image/png'
-          },
-          {
-            src: 'icon-512.png',
-            sizes: '512x512',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'any'
           },
           {
             src: 'icon-512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable'
+            purpose: 'any'
+          },
+          {
+            src: 'icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
       }

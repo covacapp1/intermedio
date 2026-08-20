@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Menu, X, Download } from "lucide-react";
+import { Menu, X, Download, Share2, Smartphone } from "lucide-react";
 import { IntIcon } from "./IntIcon";
 import { formatInt } from "../utils/economy";
 
@@ -15,8 +15,14 @@ export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogo
   const [menuOpen, setMenuOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
+    setIsStandalone(
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true
+    );
+
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e);
@@ -30,13 +36,15 @@ export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogo
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       setDeferredPrompt(null);
-      if (outcome === "accepted") return;
+      return;
     }
     setShowInstallHelp(true);
   };
 
   const isIOS = typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isAndroid = typeof navigator !== "undefined" && /Android/.test(navigator.userAgent);
+
+  if (isStandalone) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#8B4513] via-[#A0522D] to-[#654321] p-4 relative overflow-hidden flex flex-col">
