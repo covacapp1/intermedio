@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Menu, X, Download } from "lucide-react";
 import { IntIcon } from "./IntIcon";
 import { formatInt } from "../utils/economy";
 
@@ -13,6 +13,28 @@ interface WesternHomeProps {
 
 export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogout }: WesternHomeProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallable, setIsInstallable] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") {
+      setIsInstallable(false);
+    }
+    setDeferredPrompt(null);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#8B4513] via-[#A0522D] to-[#654321] p-4 relative overflow-hidden flex flex-col">
@@ -82,6 +104,15 @@ export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogo
           <WesternButton onClick={() => onNavigate("profile")}>PERFIL</WesternButton>
           <WesternButton onClick={() => onNavigate("tables")}>LOBBY</WesternButton>
           <WesternButton onClick={() => onNavigate("createTable")}>CREAR MESA</WesternButton>
+          {isInstallable ? (
+            <button
+              onClick={handleInstall}
+              className="w-full py-3 sm:py-4 bg-gradient-to-b from-[#2d9a68] to-[#1f6b47] text-white font-bold text-base sm:text-lg border-4 border-[#654321] rounded-lg shadow-[0_8px_20px_rgba(0,0,0,0.6)] hover:from-[#38b577] hover:to-[#2d9a68] transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+            >
+              <Download className="w-5 h-5" />
+              Instalar App
+            </button>
+          ) : null}
         </div>
       </div>
 
