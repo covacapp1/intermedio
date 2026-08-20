@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  base: './',
+  base: '/',
   plugins: [
     // The React and Tailwind plugins are both required for Make, even if
     // Tailwind is not being actively used – do not remove them
@@ -18,8 +18,8 @@ export default defineConfig({
         name: 'Intermedio Cards',
         short_name: 'Intermedio',
         description: 'Juego de cartas español',
-        theme_color: '#ffffff',
-        background_color: '#ffffff',
+        theme_color: '#173125',
+        background_color: '#173125',
         display: 'standalone',
         orientation: 'portrait',
         icons: [
