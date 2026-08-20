@@ -4,8 +4,12 @@
   import "./styles/index.css";
   import { registerSW } from 'virtual:pwa-register';
 
-  // Register service worker for PWA
-  registerSW();
+  registerSW({
+    immediate: true,
+    onRegisteredSW(swUrl) {
+      console.log('SW registered:', swUrl);
+    }
+  });
 
   createRoot(document.getElementById("root")!).render(<App />);
   
