@@ -16,6 +16,25 @@
 
   <body>
     <div id="root"></div>
+    <noscript>Necesitas JavaScript para usar esta app.</noscript>
+    <script>
+      document.getElementById("root").innerHTML =
+        '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#1b120a;color:#F5DEB3;font-family:monospace;font-size:14px;text-align:center;padding:20px">Cargando app...<br><small style="color:#888;margin-top:8px">BUILD: ' +
+        new Date().toISOString().slice(0, 16) +
+        "</small></div>";
+      window.addEventListener("error", function (e) {
+        document.getElementById("root").innerHTML =
+          '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#1b120a;color:#ff6b6b;font-family:monospace;font-size:13px;text-align:center;padding:20px;white-space:pre-wrap;word-break:break-word">JS ERROR:<br><br>' +
+          String(e.message || e).replace(/</g, "&lt;") +
+          '<br><small style="color:#888">line ' + (e.lineno || "?") + "</small></div>";
+      }, true);
+      window.addEventListener("unhandledrejection", function (e) {
+        document.getElementById("root").innerHTML =
+          '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#1b120a;color:#ff6b6b;font-family:monospace;font-size:13px;text-align:center;padding:20px;white-space:pre-wrap;word-break:break-word">PROMISE ERROR:<br><br>' +
+          String(e.reason || e).replace(/</g, "&lt;") +
+          "</div>";
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
