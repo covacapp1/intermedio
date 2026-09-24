@@ -144,87 +144,104 @@ function App() {
       return;
     }
 
-    const email = authUser.email.trim().toLowerCase();
-    const metadataUsername =
-      typeof authUser.user_metadata?.username === "string" && authUser.user_metadata.username.trim()
-        ? authUser.user_metadata.username.trim()
-        : email.split("@")[0] || "Jugador";
-    const metadataFirstName =
-      typeof authUser.user_metadata?.first_name === "string" ? authUser.user_metadata.first_name.trim() : "";
-    const metadataLastName =
-      typeof authUser.user_metadata?.last_name === "string" ? authUser.user_metadata.last_name.trim() : "";
-    const metadataDni =
-      typeof authUser.user_metadata?.dni === "string" ? authUser.user_metadata.dni.trim() : "";
-    const metadataFullName =
-      typeof authUser.user_metadata?.full_name === "string"
-        ? authUser.user_metadata.full_name
-        : [metadataFirstName, metadataLastName].filter(Boolean).join(" ");
-    const avatarUrl =
-      typeof authUser.user_metadata?.avatar_url === "string" ? authUser.user_metadata.avatar_url : "";
+    try {
+      const email = authUser.email.trim().toLowerCase();
+      const metadataUsername =
+        typeof authUser.user_metadata?.username === "string" && authUser.user_metadata.username.trim()
+          ? authUser.user_metadata.username.trim()
+          : email.split("@")[0] || "Jugador";
+      const metadataFirstName =
+        typeof authUser.user_metadata?.first_name === "string" ? authUser.user_metadata.first_name.trim() : "";
+      const metadataLastName =
+        typeof authUser.user_metadata?.last_name === "string" ? authUser.user_metadata.last_name.trim() : "";
+      const metadataDni =
+        typeof authUser.user_metadata?.dni === "string" ? authUser.user_metadata.dni.trim() : "";
+      const metadataFullName =
+        typeof authUser.user_metadata?.full_name === "string"
+          ? authUser.user_metadata.full_name
+          : [metadataFirstName, metadataLastName].filter(Boolean).join(" ");
+      const avatarUrl =
+        typeof authUser.user_metadata?.avatar_url === "string" ? authUser.user_metadata.avatar_url : "";
 
-    const profilePayload: Record<string, unknown> = {
-      id: authUser.id,
-      username: metadataUsername,
-      email: email,
-    };
+      const profilePayload: Record<string, unknown> = {
+        id: authUser.id,
+        username: metadataUsername,
+        email: email,
+      };
 
-    // Only set avatar_url from metadata if it exists; don't overwrite a Storage URL
-    if (avatarUrl) {
-      profilePayload.avatar_url = avatarUrl;
-    }
-
-    const { data: existingProfile } = await supabase
-      .from("profiles")
-      .select("username, avatar_url, first_name, last_name, dni, email")
-      .eq("id", authUser.id)
-      .maybeSingle();
-
-    if (existingProfile) {
-      profilePayload.first_name = existingProfile.first_name || metadataFirstName || null;
-      profilePayload.last_name = existingProfile.last_name || metadataLastName || null;
-      profilePayload.dni = existingProfile.dni || metadataDni || null;
-      if (existingProfile.avatar_url) {
-        profilePayload.avatar_url = existingProfile.avatar_url;
+      if (avatarUrl) {
+        profilePayload.avatar_url = avatarUrl;
       }
-    } else {
-      profilePayload.first_name = metadataFirstName || null;
-      profilePayload.last_name = metadataLastName || null;
-      profilePayload.dni = metadataDni || null;
-    }
 
-    const { data: upsertedProfile, error } = await supabase
-      .from("profiles")
-      .upsert(profilePayload)
-      .select("username, avatar_url, first_name, last_name, dni, email")
-      .maybeSingle();
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("username, avatar_url, first_name, last_name, dni, email")
+        .eq("id", authUser.id)
+        .maybeSingle();
 
-    if (error) {
-      console.error("Error syncing profile:", error);
-    }
+      if (existingProfile) {
+        profilePayload.first_name = existingProfile.first_name || metadataFirstName || null;
+        profilePayload.last_name = existingProfile.last_name || metadataLastName || null;
+        profilePayload.dni = existingProfile.dni || metadataDni || null;
+        if (existingProfile.avatar_url) {
+          profilePayload.avatar_url = existingProfile.avatar_url;
+        }
+      } else {
+        profilePayload.first_name = metadataFirstName || null;
+        profilePayload.last_name = metadataLastName || null;
+        profilePayload.dni = metadataDni || null;
+      }
 
-    const profile = upsertedProfile;
+      const { data: upsertedProfile, error } = await supabase
+        .from("profiles")
+        .upsert(profilePayload)
+        .select("username, avatar_url, first_name, last_name, dni, email")
+        .maybeSingle();
 
-    const username = profile?.username || metadataUsername;
-    const fullName =
-      [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || metadataFullName;
-    const dni = profile?.dni || metadataDni;
-    const profileEmail = profile?.email || email;
-    const profilePhotoUrl = profile?.avatar_url || avatarUrl;
+      if (error) {
+        console.error("Error syncing profile:", error);
+      }
 
-    setUserData((previous) => ({
-      ...previous,
-      id: authUser.id,
-      email: profileEmail,
-      profile: {
-        ...previous.profile,
-        username,
-        fullName,
-        dni,
+      const profile = upsertedProfile;
+
+      const username = profile?.username || metadataUsername;
+      const fullName =
+        [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || metadataFullName;
+      const dni = profile?.dni || metadataDni;
+      const profileEmail = profile?.email || email;
+      const profilePhotoUrl = profile?.avatar_url || avatarUrl;
+
+      setUserData((previous) => ({
+        ...previous,
+        id: authUser.id,
         email: profileEmail,
-        photoUrl: profilePhotoUrl,
-      },
-    }));
-    setCurrentView((previous) => (previous === "login" ? "home" : previous));
+        profile: {
+          ...previous.profile,
+          username,
+          fullName,
+          dni,
+          email: profileEmail,
+          photoUrl: profilePhotoUrl,
+        },
+      }));
+      setCurrentView((previous) => (previous === "login" ? "home" : previous));
+    } catch (err) {
+      console.error("syncUserFromAuth failed:", err);
+      setUserData((previous) => ({
+        ...previous,
+        id: authUser.id,
+        email: authUser.email!.trim().toLowerCase(),
+        profile: {
+          ...previous.profile,
+          username:
+            typeof authUser.user_metadata?.username === "string" && authUser.user_metadata.username.trim()
+              ? authUser.user_metadata.username.trim()
+              : authUser.email!.split("@")[0] || "Jugador",
+          email: authUser.email!.trim().toLowerCase(),
+        },
+      }));
+      setCurrentView((previous) => (previous === "login" ? "home" : previous));
+    }
   };
 
   const refreshWallet = async (nextUserId?: string, nextEmail?: string) => {
@@ -1333,7 +1350,19 @@ function App() {
     );
   }
 
-  return null;
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#1b120a] text-[#F5DEB3] p-4 text-center">
+      <p className="mb-4 text-lg">Algo salio mal.</p>
+      <button
+        onClick={() => {
+          setCurrentView("home");
+        }}
+        className="px-4 py-2 bg-[#654321] border-2 border-[#D4AF37] rounded hover:bg-[#7d5a2e] transition-colors"
+      >
+        Volver al inicio
+      </button>
+    </div>
+  );
 }
 
 export default App;
