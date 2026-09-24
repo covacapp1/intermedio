@@ -17,22 +17,20 @@ export default defineConfig({
         globIgnores: ['**/index.html'],
         navigateFallback: null,
         cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
         runtimeCaching: [
           {
             urlPattern: ({ request }) => request.mode === 'navigate',
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'pages-cache',
-              networkTimeoutSeconds: 3,
-              expiration: { maxEntries: 5, maxAgeSeconds: 3600 }
-            }
+            handler: 'NetworkOnly'
           },
           {
             urlPattern: ({ request }) => request.destination === 'script' || request.destination === 'style',
-            handler: 'CacheFirst',
+            handler: 'NetworkFirst',
             options: {
               cacheName: 'static-cache',
-              expiration: { maxEntries: 50, maxAgeSeconds: 604800 }
+              networkTimeoutSeconds: 5,
+              expiration: { maxEntries: 30, maxAgeSeconds: 86400 }
             }
           }
         ]
