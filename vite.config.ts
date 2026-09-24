@@ -12,6 +12,31 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'logo.png'],
+      workbox: {
+        globPatterns: ['**/*.{js,css,ico,png,svg,woff2}'],
+        globIgnores: ['**/index.html'],
+        navigateFallback: null,
+        cleanupOutdatedCaches: true,
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'pages-cache',
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 5, maxAgeSeconds: 3600 }
+            }
+          },
+          {
+            urlPattern: ({ request }) => request.destination === 'script' || request.destination === 'style',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'static-cache',
+              expiration: { maxEntries: 50, maxAgeSeconds: 604800 }
+            }
+          }
+        ]
+      },
       manifest: {
         name: 'Intermedio Cards',
         short_name: 'Intermedio',
