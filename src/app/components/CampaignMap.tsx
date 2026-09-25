@@ -113,10 +113,9 @@ export function CampaignMap({
 
         <div className="bg-[#8B4513] border-4 border-[#654321] rounded-lg p-4 sm:p-6 shadow-[0_10px_30px_rgba(0,0,0,0.7)] mb-6">
           <div
-            className="relative w-full rounded-xl overflow-hidden border-2 border-[#5f3f1c]"
+            className="relative w-full rounded-xl overflow-hidden border-2 border-[#5f3f1c] aspect-[4/3]"
             style={{
-              height: "350px",
-              background: "url(/map-bg.jpg) left center / cover no-repeat",
+              background: "url(/map-bg.jpg) center / cover no-repeat",
             }}
           >
             {/* marco interior estilo cuerda */}
@@ -151,7 +150,7 @@ export function CampaignMap({
                 style={{ left: `${loc.x}%`, top: `${loc.y}%` }}
               >
                 <div
-                  className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-lg sm:text-xl border-[3px] shadow-[0_3px_0_rgba(62,39,20,0.55),0_6px_12px_rgba(0,0,0,0.35)] ${
+                  className={`w-9 h-9 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-base sm:text-xl border-[3px] shadow-[0_3px_0_rgba(62,39,20,0.55),0_6px_12px_rgba(0,0,0,0.35)] ${
                     loc.completed
                       ? "border-[#1f6b47]"
                       : loc.unlocked
