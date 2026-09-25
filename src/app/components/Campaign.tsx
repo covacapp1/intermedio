@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CampaignMap } from "./CampaignMap";
 import { CampaignTown } from "./CampaignTown";
 import { CampaignTable } from "./CampaignTable";
+import { CampaignShop } from "./CampaignShop";
 import type { CampaignGameState, CampaignLocation, CampaignState } from "../types/campaign";
 import {
   advanceRound,
@@ -14,10 +15,13 @@ import {
   getTownDef,
   isGameOver,
   loadCampaignState,
+  MATCH_BUY_IN,
   playerAction,
   saveCampaignState,
+  skipUnlock,
   startCampaignGame,
-  townCompleted,
+  unlockNextIfConquered,
+  WIN_PRIZE,
 } from "../services/campaignEngine";
 
 interface CampaignProps {
@@ -38,11 +42,25 @@ export function Campaign({ onBack, userId }: CampaignProps) {
   const [gameState, setGameState] = useState<CampaignGameState | null>(null);
   const [activeBuildingId, setActiveBuildingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [shopOpen, setShopOpen] = useState(false);
   const finalizedRef = useRef(false);
+  const shopPromptedRef = useRef(false);
 
   useEffect(() => {
     if (userId) saveCampaignState(userId, campaignState);
   }, [campaignState, userId]);
+
+  useEffect(() => {
+    if (phase === "game") return;
+    if (campaignState.balance < MATCH_BUY_IN) {
+      if (!shopPromptedRef.current) {
+        shopPromptedRef.current = true;
+        setShopOpen(true);
+      }
+    } else {
+      shopPromptedRef.current = false;
+    }
+  }, [campaignState.balance, phase]);
 
   const pendingIncome = useMemo(() => getPendingIncome(campaignState), [campaignState]);
   const currentLocation = campaignState.locations.find((l) => l.id === campaignState.currentLocationId) ?? null;
@@ -67,27 +85,17 @@ export function Campaign({ onBack, userId }: CampaignProps) {
       setCampaignState((prev) => {
         let next: CampaignState = {
           ...prev,
-          balance: prev.balance + cashOut,
+          balance: prev.balance + cashOut + (win ? WIN_PRIZE : 0),
           gamesPlayed: prev.gamesPlayed + 1,
           gamesWon: prev.gamesWon + (win ? 1 : 0),
-          totalWon: prev.totalWon + (win ? cashOut : 0),
+          totalWon: prev.totalWon + (win ? cashOut + WIN_PRIZE : 0),
         };
 
         if (buildingKey && !next.completedBuildings.includes(buildingKey)) {
           next = { ...next, completedBuildings: [...next.completedBuildings, buildingKey] };
         }
 
-        if (buildingKey && townCompleted(next, state.locationId)) {
-          const idx = next.locations.findIndex((l) => l.id === state.locationId);
-          if (idx !== -1) {
-            next.locations = next.locations.map((l, i) => {
-              if (i === idx) return { ...l, completed: true };
-              if (i === idx + 1) return { ...l, unlocked: true };
-              return l;
-            });
-          }
-        }
-
+        next = unlockNextIfConquered(next);
         return next;
       });
 
@@ -106,7 +114,7 @@ export function Campaign({ onBack, userId }: CampaignProps) {
   const handlePlay = (buildingId: string) => {
     if (!currentLocation) return;
     if (campaignState.balance < currentLocation.buyIn) {
-      showError(`Necesitás ${currentLocation.buyIn} INT para jugar.`);
+      setShopOpen(true);
       return;
     }
     finalizedRef.current = false;
@@ -123,7 +131,23 @@ export function Campaign({ onBack, userId }: CampaignProps) {
       showError(result.error ?? "No se pudo comprar.");
       return;
     }
+    setCampaignState(unlockNextIfConquered(result.state));
+  };
+
+  const handleSkipUnlock = () => {
+    if (!currentLocation) return;
+    const result = skipUnlock(campaignState, currentLocation.id);
+    if (!result.ok) {
+      showError(result.error ?? "No se pudo desbloquear.");
+      return;
+    }
     setCampaignState(result.state);
+  };
+
+  const handleShopBuy = (amount: number) => {
+    setCampaignState((prev) => ({ ...prev, balance: prev.balance + amount }));
+    setShopOpen(false);
+    shopPromptedRef.current = false;
   };
 
   const handleClaimIncome = () => {
@@ -199,8 +223,12 @@ export function Campaign({ onBack, userId }: CampaignProps) {
           onPlay={handlePlay}
           onBuyProperty={handleBuyProperty}
           onClaimIncome={handleClaimIncome}
+          onSkipUnlock={handleSkipUnlock}
         />
         {error ? <ErrorBanner message={error} /> : null}
+        {shopOpen ? (
+          <CampaignShop balance={campaignState.balance} onClose={() => setShopOpen(false)} onBuy={handleShopBuy} />
+        ) : null}
       </div>
     );
   }
@@ -215,6 +243,9 @@ export function Campaign({ onBack, userId }: CampaignProps) {
         onClaimIncome={handleClaimIncome}
       />
       {error ? <ErrorBanner message={error} /> : null}
+      {shopOpen ? (
+        <CampaignShop balance={campaignState.balance} onClose={() => setShopOpen(false)} onBuy={handleShopBuy} />
+      ) : null}
     </div>
   );
 }

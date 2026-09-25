@@ -144,7 +144,7 @@ export function CampaignMap({ campaignState, pendingIncome, onBack, onSelectLoca
                     const town = getTownDef(loc.id);
                     const done = townCompleted(campaignState, loc.id);
                     if (!town) return "";
-                    return done ? "✓ Completado" : `${town.play.length} lugares`;
+                    return done ? "✓ Conquistado" : `${town.play.length} lugares`;
                   })()}
                 </span>
               </button>

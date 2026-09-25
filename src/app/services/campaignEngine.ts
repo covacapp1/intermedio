@@ -8,6 +8,9 @@ const AI_NAMES = [
 ];
 
 export const MATCH_BUY_IN = 50;
+export const WIN_PRIZE = 100;
+export const SKIP_UNLOCK_PRICE = 800;
+export const SHOP_PACKS = [500, 1000, 2000];
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const TOWN_DEFS: TownDef[] = [
@@ -192,7 +195,55 @@ export function buyProperty(
 export function townCompleted(state: CampaignState, townId: string): boolean {
   const town = getTownDef(townId);
   if (!town || town.play.length === 0) return false;
-  return town.play.every((b) => state.completedBuildings.includes(`${townId}:${b.id}`));
+  const playsDone = town.play.every((b) => state.completedBuildings.includes(`${townId}:${b.id}`));
+  const propsOwned = town.properties.every((p) => state.ownedProperties.includes(`${townId}:${p.id}`));
+  return playsDone && propsOwned;
+}
+
+export function unlockNextIfConquered(state: CampaignState): CampaignState {
+  let next = state;
+  next.locations.forEach((loc, idx) => {
+    if (loc.completed) return;
+    if (idx + 1 >= next.locations.length) return;
+    if (!townCompleted(next, loc.id)) return;
+    next = {
+      ...next,
+      locations: next.locations.map((l, i) => {
+        if (i === idx) return { ...l, completed: true };
+        if (i === idx + 1 && !l.unlocked) return { ...l, unlocked: true };
+        return l;
+      }),
+    };
+  });
+  return next;
+}
+
+export function skipUnlock(
+  state: CampaignState,
+  townId: string
+): { ok: boolean; state: CampaignState; error?: string } {
+  const idx = state.locations.findIndex((l) => l.id === townId);
+  if (idx === -1 || idx + 1 >= state.locations.length) {
+    return { ok: false, state, error: "No hay pueblo siguiente." };
+  }
+  if (state.locations[idx + 1].unlocked) {
+    return { ok: false, state, error: "El pueblo siguiente ya está desbloqueado." };
+  }
+  if (state.balance < SKIP_UNLOCK_PRICE) {
+    return {
+      ok: false,
+      state,
+      error: `Necesitás ${SKIP_UNLOCK_PRICE} INT para desbloquear. Tenés ${state.balance} INT.`,
+    };
+  }
+  return {
+    ok: true,
+    state: {
+      ...state,
+      balance: state.balance - SKIP_UNLOCK_PRICE,
+      locations: state.locations.map((l, i) => (i === idx + 1 ? { ...l, unlocked: true } : l)),
+    },
+  };
 }
 
 export const DEFAULT_CAMPAIGN_LOCATIONS: CampaignLocation[] = [
@@ -417,7 +468,6 @@ export function loadCampaignState(userId: string): CampaignState | null {
     if (!Array.isArray(parsed.ownedProperties)) parsed.ownedProperties = [];
     if (!Array.isArray(parsed.completedBuildings)) parsed.completedBuildings = [];
     if (typeof parsed.lastIncomeClaimAt !== "number") parsed.lastIncomeClaimAt = Date.now();
-    if (parsed.balance < MATCH_BUY_IN) parsed.balance = MATCH_BUY_IN;
     return parsed;
   } catch {
     return null;

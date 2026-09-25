@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ArrowLeft, Coins, User } from "lucide-react";
 import type { CampaignGameState, CampaignPlayer } from "../types/campaign";
 import { formatMoney } from "../utils/deck";
-import { calculateWinChance } from "../services/campaignEngine";
+import { calculateWinChance, WIN_PRIZE } from "../services/campaignEngine";
 
 interface CampaignTableProps {
   gameState: CampaignGameState;
@@ -104,9 +104,14 @@ export function CampaignTable({
           <h2 className="text-3xl font-bold text-[#F5DEB3] mb-2" style={{ fontFamily: "serif" }}>
             {didWin ? "¡GANASTE!" : "PERDISTE"}
           </h2>
-          <p className="text-[#D2B48C] mb-6">
+          <p className="text-[#D2B48C] mb-4">
             {didWin ? `¡Dominaste ${locationName}!` : "Te quedaste sin fichas."}
           </p>
+          {didWin ? (
+            <p className="text-green-400 font-bold text-sm mb-4">
+              🎁 Premio: +{formatMoney(WIN_PRIZE)}
+            </p>
+          ) : null}
           <div className="bg-black/30 rounded-lg p-3 mb-6">
             <p className="text-[#D4AF37] font-bold text-lg">{formatMoney(campaignBalance)}</p>
             <p className="text-[#D2B48C] text-xs">Balance de campaña</p>
@@ -115,7 +120,7 @@ export function CampaignTable({
             onClick={onLeave}
             className="w-full py-3 bg-gradient-to-b from-[#D4AF37] to-[#B8941E] text-[#3E2723] font-bold text-lg border-2 border-[#654321] rounded-lg hover:from-[#FFD700] hover:to-[#D4AF37] transition-all"
           >
-            Volver al Mapa
+            Volver al Pueblo
           </button>
         </div>
       </div>

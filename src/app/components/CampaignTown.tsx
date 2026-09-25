@@ -1,6 +1,7 @@
-import { ArrowLeft, Coins, Lock, CheckCircle, Wallet } from "lucide-react";
+import { ArrowLeft, Coins, Lock, CheckCircle, Wallet, FastForward } from "lucide-react";
 import type { CampaignLocation, CampaignState, TownDef } from "../types/campaign";
 import { formatMoney } from "../utils/deck";
+import { SKIP_UNLOCK_PRICE } from "../services/campaignEngine";
 
 interface CampaignTownProps {
   location: CampaignLocation;
@@ -11,6 +12,7 @@ interface CampaignTownProps {
   onPlay: (buildingId: string) => void;
   onBuyProperty: (propertyId: string) => void;
   onClaimIncome: () => void;
+  onSkipUnlock: () => void;
 }
 
 const DIFFICULTY_COLORS: Record<string, string> = {
@@ -36,10 +38,21 @@ export function CampaignTown({
   onPlay,
   onBuyProperty,
   onClaimIncome,
+  onSkipUnlock,
 }: CampaignTownProps) {
   const completedCount = townDef.play.filter((b) =>
     campaignState.completedBuildings.includes(`${townDef.townId}:${b.id}`)
   ).length;
+  const ownedCount = townDef.properties.filter((p) =>
+    campaignState.ownedProperties.includes(`${townDef.townId}:${p.id}`)
+  ).length;
+
+  const locIdx = campaignState.locations.findIndex((l) => l.id === location.id);
+  const nextLocation =
+    locIdx !== -1 && locIdx + 1 < campaignState.locations.length
+      ? campaignState.locations[locIdx + 1]
+      : null;
+  const showSkip = Boolean(nextLocation && !nextLocation.unlocked && !location.completed);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#8B4513] via-[#A0522D] to-[#654321] p-4">
@@ -74,16 +87,23 @@ export function CampaignTown({
             {location.icon} {location.name}
           </h1>
           <p className="text-[#D2B48C] text-sm mt-1">
-            Lugares jugados: <strong className="text-[#D4AF37]">{completedCount}/{townDef.play.length}</strong>
-            {townDef.play.length > 0 && completedCount === townDef.play.length ? " — ¡Pueblo completado!" : ""}
+            Lugares: <strong className="text-[#D4AF37]">{completedCount}/{townDef.play.length}</strong>
+            {" · "}
+            Casas: <strong className="text-[#D4AF37]">{ownedCount}/{townDef.properties.length}</strong>
+            {location.completed ? " — ¡Pueblo conquistado!" : ""}
           </p>
+          {!location.completed ? (
+            <p className="text-[#D2B48C] text-xs mt-1">
+              Ganá en todos los lugares y comprá todas las casas para conquistarlo
+            </p>
+          ) : null}
         </div>
 
         <div className="bg-[#8B4513] border-4 border-[#654321] rounded-lg p-4 shadow-[0_10px_30px_rgba(0,0,0,0.7)] mb-5">
           <h2 className="text-[#F5DEB3] font-bold mb-1" style={{ fontFamily: "serif" }}>
             🎯 Lugares para jugar
           </h2>
-          <p className="text-[#D2B48C] text-xs mb-3">Ganá en todos para completar el pueblo</p>
+          <p className="text-[#D2B48C] text-xs mb-3">Cada victoria te da <strong className="text-green-400">+100 INT</strong> de premio</p>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {townDef.play.map((building) => {
               const done = campaignState.completedBuildings.includes(`${townDef.townId}:${building.id}`);
@@ -171,9 +191,29 @@ export function CampaignTown({
           </div>
           <div className="mt-3 flex items-center justify-center gap-1.5 text-[#D2B48C] text-xs">
             <Lock className="w-3 h-3" />
-            Entrá a un lugar y ganá para completar el pueblo
+            Ganá en todos los lugares y comprá todas las casas para conquistar el pueblo
           </div>
         </div>
+
+        {showSkip ? (
+          <div className="mt-5 bg-[#8B4513] border-4 border-[#654321] rounded-lg p-4 shadow-[0_10px_30px_rgba(0,0,0,0.7)] text-center">
+            <p className="text-[#D2B48C] text-xs mb-2">
+              ¿Querés saltar la conquista? Desbloqueá <strong className="text-[#F5DEB3]">{nextLocation?.name}</strong> pagando:
+            </p>
+            <button
+              onClick={onSkipUnlock}
+              disabled={campaignState.balance < SKIP_UNLOCK_PRICE}
+              className={`inline-flex items-center gap-2 py-2.5 px-5 rounded-lg border-2 font-bold text-sm transition-all ${
+                campaignState.balance >= SKIP_UNLOCK_PRICE
+                  ? "bg-gradient-to-b from-[#D4AF37] to-[#B8941E] border-[#654321] text-[#3E2723] hover:from-[#FFD700] hover:to-[#D4AF37] active:scale-[0.98]"
+                  : "bg-gray-600 border-gray-700 text-gray-300 opacity-60 cursor-not-allowed"
+              }`}
+            >
+              <FastForward className="w-4 h-4" />
+              Desbloquear — {formatMoney(SKIP_UNLOCK_PRICE)}
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );
