@@ -336,6 +336,14 @@ function App() {
     return null;
   };
 
+  const handleClaimCompletionReward = async (): Promise<"claimed" | "already" | "error"> => {
+    if (!userData.id || !userData.email) return "error";
+    const response = await api.claimCampaignCompletionReward(userData.id, userData.email);
+    if (!response.data) return "error";
+    applyWalletSummary(response.data.wallet);
+    return response.data.alreadyClaimed ? "already" : "claimed";
+  };
+
   const recordWalletDebit = async (
     amount: number,
     kind: "game_buy_in" | "rebuy",
@@ -1444,6 +1452,8 @@ function App() {
         userId={userData.id}
         onPullCampaignBalance={pullCampaignBalance}
         onSyncCampaignBalance={handleSyncCampaignBalance}
+        onClaimCompletionReward={handleClaimCompletionReward}
+        completionRewardClaimed={walletSummary.campaignCompletionRewarded ?? false}
         shopCreditVersion={shopCreditVersion}
         onOpenMarketplace={() => {
           setMarketplaceFromCampaign(true);

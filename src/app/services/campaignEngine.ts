@@ -11,6 +11,7 @@ export const MATCH_BUY_IN = 50;
 export const WIN_PRIZE = 100;
 export const SKIP_UNLOCK_PRICE = 800;
 export const SHOP_PACKS = [500, 1000, 2000];
+export const CAMPAIGN_COMPLETION_REWARD = 5000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const TOWN_DEFS: TownDef[] = [
@@ -200,12 +201,22 @@ export function townCompleted(state: CampaignState, townId: string): boolean {
   return playsDone && propsOwned;
 }
 
+export function isCampaignCompleted(state: CampaignState): boolean {
+  return TOWN_DEFS.every((town) => townCompleted(state, town.townId));
+}
+
 export function unlockNextIfConquered(state: CampaignState): CampaignState {
   let next = state;
   next.locations.forEach((loc, idx) => {
     if (loc.completed) return;
-    if (idx + 1 >= next.locations.length) return;
     if (!townCompleted(next, loc.id)) return;
+    if (idx + 1 >= next.locations.length) {
+      next = {
+        ...next,
+        locations: next.locations.map((l, i) => (i === idx ? { ...l, completed: true } : l)),
+      };
+      return;
+    }
     next = {
       ...next,
       locations: next.locations.map((l, i) => {

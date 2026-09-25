@@ -1012,4 +1012,31 @@ export const api = {
       }
     );
   },
+
+  claimCampaignCompletionReward: async (
+    userId: string,
+    email: string
+  ): Promise<ApiResponse<{ alreadyClaimed: boolean; wallet: WalletSummary }>> => {
+    return withLocalFallback(
+      () => apiCallAuthenticated('/wallet/campaign-completion-reward', 'POST'),
+      () => {
+        const wallet = walletStorage.get(userId, email);
+        if (wallet.campaignCompletionRewarded) {
+          return { data: { alreadyClaimed: true, wallet } };
+        }
+        wallet.balance += 5000;
+        wallet.campaignCompletionRewarded = true;
+        wallet.transactions = [...wallet.transactions, {
+          id: `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          kind: 'adjustment',
+          direction: 'credit',
+          amount: 5000,
+          status: 'approved',
+          description: 'Premio por completar la Campaña (5000 INT)',
+          createdAt: Date.now(),
+        }];
+        return { data: { alreadyClaimed: false, wallet: walletStorage.save(wallet) } };
+      }
+    );
+  },
 };

@@ -87,6 +87,7 @@ interface WalletSummary {
   email: string;
   balance: number;
   campaignBalance?: number;
+  campaignCompletionRewarded?: boolean;
   transactions: WalletTransaction[];
   withdrawals: WithdrawalRequest[];
   updatedAt: number;
@@ -1467,6 +1468,42 @@ app.post("/server/wallet/campaign-balance", async (c) => {
   } catch (error) {
     console.log("Error syncing campaign balance:", error);
     return c.json({ error: "Failed to sync campaign balance" }, 500);
+  }
+});
+
+app.post("/server/wallet/campaign-completion-reward", async (c) => {
+  try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
+    const wallet = await getWallet(auth.user.id, auth.user.email);
+    if (wallet.campaignCompletionRewarded) {
+      return c.json({ alreadyClaimed: true, wallet });
+    }
+
+    const reward = 5000;
+    wallet.balance += reward;
+    wallet.campaignCompletionRewarded = true;
+    wallet.transactions = sortTransactions([
+      ...wallet.transactions,
+      {
+        id: `tx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        kind: "adjustment",
+        direction: "credit",
+        amount: reward,
+        status: "approved",
+        description: "Premio por completar la Campaña (5000 INT)",
+        createdAt: Date.now(),
+      },
+    ]);
+    const saved = await saveWallet(wallet);
+
+    return c.json({ alreadyClaimed: false, wallet: saved });
+  } catch (error) {
+    console.log("Error claiming campaign completion reward:", error);
+    return c.json({ error: "Failed to claim campaign reward" }, 500);
   }
 });
 

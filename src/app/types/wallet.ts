@@ -50,6 +50,7 @@ export interface WalletSummary {
   email: string;
   balance: number;
   campaignBalance?: number;
+  campaignCompletionRewarded?: boolean;
   transactions: WalletTransaction[];
   withdrawals: WithdrawalRequest[];
   updatedAt: number;

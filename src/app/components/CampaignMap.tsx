@@ -6,6 +6,7 @@ import { getTownDef, townCompleted } from "../services/campaignEngine";
 interface CampaignMapProps {
   campaignState: CampaignState;
   pendingIncome: number;
+  completionRewardClaimed: boolean;
   onBack: () => void;
   onSelectLocation: (location: CampaignLocation) => void;
   onClaimIncome: () => void;
@@ -25,7 +26,14 @@ const DIFFICULTY_LABELS: Record<string, string> = {
   experto: "Experto",
 };
 
-export function CampaignMap({ campaignState, pendingIncome, onBack, onSelectLocation, onClaimIncome }: CampaignMapProps) {
+export function CampaignMap({
+  campaignState,
+  pendingIncome,
+  completionRewardClaimed,
+  onBack,
+  onSelectLocation,
+  onClaimIncome,
+}: CampaignMapProps) {
   const dailyIncome = campaignState.ownedProperties.reduce((sum, key) => {
     const sep = key.indexOf(":");
     if (sep === -1) return sum;
@@ -62,12 +70,26 @@ export function CampaignMap({ campaignState, pendingIncome, onBack, onSelectLoca
           </div>
         </div>
 
-        <div className="text-center mb-6">
+        <div className="text-center mb-4">
           <h1 className="text-3xl sm:text-4xl font-bold text-[#F5DEB3] mb-1" style={{ fontFamily: "serif" }}>
             Campaña
           </h1>
           <p className="text-[#D2B48C] text-sm">
             {campaignState.gamesPlayed} partidas — {campaignState.gamesWon} ganadas
+          </p>
+        </div>
+
+        <div
+          className={`mb-6 rounded-lg border-2 px-4 py-3 text-center shadow-lg ${
+            completionRewardClaimed
+              ? "border-green-400 bg-green-900/50"
+              : "border-[#D4AF37] bg-black/50"
+          }`}
+        >
+          <p className="text-xs sm:text-sm font-bold text-[#F5DEB3]">
+            {completionRewardClaimed
+              ? "🏆 ¡Campaña completada! Ya cobraste los 5000 INT en tu Caja de Multijugador."
+              : "🏆 Premio: al completar los 8 pueblos ganás 5000 INT en tu Caja de Multijugador."}
           </p>
         </div>
 

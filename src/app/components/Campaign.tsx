@@ -14,6 +14,7 @@ import {
   didYouWin,
   getPendingIncome,
   getTownDef,
+  isCampaignCompleted,
   isGameOver,
   loadCampaignState,
   MATCH_BUY_IN,
@@ -32,6 +33,8 @@ interface CampaignProps {
   onBuyCampaignPack: (amount: number) => Promise<string | null>;
   onPullCampaignBalance: () => Promise<number | null>;
   onSyncCampaignBalance: (balance: number) => void;
+  onClaimCompletionReward: () => Promise<"claimed" | "already" | "error">;
+  completionRewardClaimed: boolean;
   shopCreditVersion: number;
 }
 
@@ -48,6 +51,8 @@ export function Campaign({
   onBuyCampaignPack,
   onPullCampaignBalance,
   onSyncCampaignBalance,
+  onClaimCompletionReward,
+  completionRewardClaimed,
   shopCreditVersion,
 }: CampaignProps) {
   const [campaignState, setCampaignState] = useState<CampaignState>(() => {
@@ -65,6 +70,7 @@ export function Campaign({
   const lastPushedRef = useRef<number | null>(null);
   const prevBalanceRef = useRef(campaignState.balance);
   const shopReloadedRef = useRef(false);
+  const completionClaimedRef = useRef(false);
 
   useEffect(() => {
     if (userId) saveCampaignState(userId, campaignState);
@@ -120,6 +126,20 @@ export function Campaign({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopCreditVersion, userId]);
+
+  useEffect(() => {
+    if (!userId || completionClaimedRef.current) return;
+    if (!isCampaignCompleted(campaignState)) return;
+    completionClaimedRef.current = true;
+    void onClaimCompletionReward().then((result) => {
+      if (result === "claimed") {
+        setSuccess("🏆 ¡Campaña completada! Regalamos 5000 INT a tu Caja de Multijugador.");
+        window.setTimeout(() => setSuccess(null), 20000);
+      } else if (result === "error") {
+        completionClaimedRef.current = false;
+      }
+    });
+  }, [campaignState, userId, onClaimCompletionReward]);
 
   useEffect(() => {
     if (phase === "game") return;
@@ -291,6 +311,7 @@ export function Campaign({
           onSkipUnlock={handleSkipUnlock}
         />
         {error ? <ErrorBanner message={error} /> : null}
+        {success ? <SuccessBanner message={success} /> : null}
         {shopOpen ? (
           <CampaignShop
             balance={campaignState.balance}
@@ -311,6 +332,7 @@ export function Campaign({
       <CampaignMap
         campaignState={campaignState}
         pendingIncome={pendingIncome}
+        completionRewardClaimed={completionRewardClaimed}
         onBack={onBack}
         onSelectLocation={handleSelectLocation}
         onClaimIncome={handleClaimIncome}
