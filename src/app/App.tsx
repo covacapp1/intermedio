@@ -17,7 +17,8 @@ import { AdminWithdrawals } from "./components/AdminWithdrawals";
 import { AdminIntManager } from "./components/AdminIntManager";
 import { Marketplace } from "./components/Marketplace";
 import { Terms } from "./components/Terms";
-import { Campaign } from "./components/Campaign";
+import { Campaign, CAMPAIGN_SHOP_DONE_KEY } from "./components/Campaign";
+import { createCampaignState, loadCampaignState, saveCampaignState } from "./services/campaignEngine";
 import { type GameState } from "./types/game";
 import { formatMoney } from "./utils/deck";
 import { api } from "./services/api";
@@ -73,6 +74,26 @@ const getAuthRedirectUrl = () => {
   return "https://intermedio-ten.vercel.app/";
 };
 
+const CAMPAIGN_SHOP_PENDING_KEY = "campaignShopPending";
+
+interface CampaignShopPending {
+  amount: number;
+  snapshot: number;
+}
+
+const readCampaignShopPending = (): CampaignShopPending | null => {
+  if (!isBrowser) return null;
+  try {
+    const raw = sessionStorage.getItem(CAMPAIGN_SHOP_PENDING_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CampaignShopPending;
+    if (typeof parsed?.amount !== "number" || typeof parsed?.snapshot !== "number") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
 function App() {
   const [currentView, setCurrentView] = useState<AppView>("login");
   const [userData, setUserData] = useState<UserData>(emptyUserData);
@@ -105,6 +126,7 @@ function App() {
   });
   const [showPotModal, setShowPotModal] = useState(false);
   const [showRebuyModal, setShowRebuyModal] = useState(false);
+  const [marketplaceFromCampaign, setMarketplaceFromCampaign] = useState(false);
   const [timeLeftSeconds, setTimeLeftSeconds] = useState(20);
   const [isProcessingBet, setIsProcessingBet] = useState(false);
 
@@ -115,6 +137,7 @@ function App() {
   const lobbyUnsubscribeRef = useRef<(() => void) | null>(null);
   const gameUnsubscribeRef = useRef<(() => void) | null>(null);
   const processedMercadoPagoReturnRef = useRef<string | null>(null);
+  const campaignTransferRef = useRef(false);
   const isAdmin = userData.email === appConfig.adminEmail;
   const isYourTurn = gameState.players[gameState.currentTurn]?.id === userData.id;
 
@@ -254,6 +277,11 @@ function App() {
     const response = await api.getWalletSummary(userId, email);
     if (response.data) {
       applyWalletSummary(response.data);
+
+      const pending = readCampaignShopPending();
+      if (pending && response.data.balance >= pending.snapshot + pending.amount) {
+        await completeCampaignShopTransfer(pending);
+      }
     }
   };
 
@@ -374,14 +402,21 @@ function App() {
     }
 
     const handleMercadoPagoReturn = async () => {
+      const campaignPendingAtStart = readCampaignShopPending();
+      const isCampaignPurchase = Boolean(
+        campaignPendingAtStart || sessionStorage.getItem(CAMPAIGN_SHOP_DONE_KEY)
+      );
+
       const noticeByStatus: Record<string, string> = {
-        success: "Volviste desde Mercado Pago. Vamos a refrescar tu saldo INT para confirmar la acreditacion.",
+        success: isCampaignPurchase
+          ? "Volviste desde Mercado Pago. Estamos confirmando tu pago para la Campaña."
+          : "Volviste desde Mercado Pago. Vamos a refrescar tu saldo INT para confirmar la acreditacion.",
         pending: "El pago quedo pendiente. Apenas Mercado Pago lo confirme por webhook, se acreditan tus INT.",
         error: "El pago no pudo completarse. Podes intentarlo nuevamente desde el cajero.",
       };
 
       setCashierNotice(noticeByStatus[paymentStatus] ?? "Estado de pago recibido.");
-      setCurrentView(userData.id ? "cashier" : "login");
+      setCurrentView(userData.id ? (isCampaignPurchase ? "campaign" : "cashier") : "login");
 
       if (!userData.id || !userData.email) {
         return;
@@ -389,22 +424,44 @@ function App() {
 
       processedMercadoPagoReturnRef.current = paymentReturnKey;
 
-      if (paymentId && (paymentStatus === "success" || paymentStatus === "pending")) {
-        const response = await api.reconcileDeposit({
-          userId: userData.id,
-          email: userData.email,
-          paymentId,
-        });
+      if (paymentStatus === "error") {
+        sessionStorage.removeItem(CAMPAIGN_SHOP_PENDING_KEY);
+      }
 
-        if (response.data?.wallet) {
-          applyWalletSummary(response.data.wallet);
-          if (response.data.approved) {
-            setCashierNotice("Pago confirmado. Ya acreditamos tus INT.");
-          } else if (response.data.paymentStatus === "pending") {
-            setCashierNotice("El pago sigue pendiente. Apenas se confirme, se acreditan tus INT.");
+      if (paymentId && (paymentStatus === "success" || paymentStatus === "pending")) {
+        let readyBalance: number | null = null;
+
+        for (let attempt = 0; attempt < 10; attempt += 1) {
+          const response = await api.reconcileDeposit({
+            userId: userData.id,
+            email: userData.email,
+            paymentId,
+          });
+
+          if (!response.data?.wallet) {
+            await refreshWallet(userData.id, userData.email);
+            break;
           }
-        } else {
-          await refreshWallet(userData.id, userData.email);
+
+          applyWalletSummary(response.data.wallet);
+          readyBalance = response.data.wallet.balance;
+
+          if (response.data.approved) break;
+          if (attempt < 9) {
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+          }
+        }
+
+        const pending = readCampaignShopPending();
+        if (pending && readyBalance !== null && readyBalance >= pending.snapshot + pending.amount) {
+          await completeCampaignShopTransfer(pending);
+          setCashierNotice(`Pago confirmado. Sumamos ${formatMoney(pending.amount)} a tu Campaña.`);
+        } else if (pending) {
+          setCashierNotice(
+            "El pago sigue pendiente. Cuando Mercado Pago lo confirme, los INT se acreditan a tu Campaña."
+          );
+        } else if (paymentStatus === "success") {
+          setCashierNotice("Pago confirmado. Ya acreditamos tus INT.");
         }
       } else {
         await refreshWallet(userData.id, userData.email);
@@ -807,6 +864,76 @@ function App() {
       response.error ??
         "No pudimos iniciar Mercado Pago. Revisa Access Token, Public Key y URLs de retorno."
     );
+  };
+
+  const completeCampaignShopTransfer = async (pending: CampaignShopPending): Promise<void> => {
+    if (!userData.id || !userData.email) return;
+    if (campaignTransferRef.current) return;
+    campaignTransferRef.current = true;
+
+    try {
+      const response = await api.recordWalletMovement({
+        userId: userData.id,
+        email: userData.email,
+        amount: pending.amount,
+        direction: "debit",
+        kind: "game_buy_in",
+        description: "Compra de INT para la Campaña",
+      });
+
+      if (response.data) {
+        applyWalletSummary(response.data);
+      } else {
+        setUserData((previous) => ({
+          ...previous,
+          balance: Math.max(0, previous.balance - pending.amount),
+        }));
+      }
+
+      const campaign = loadCampaignState(userData.id) ?? createCampaignState();
+      campaign.balance += pending.amount;
+      saveCampaignState(userData.id, campaign);
+
+      sessionStorage.removeItem(CAMPAIGN_SHOP_PENDING_KEY);
+      sessionStorage.setItem(CAMPAIGN_SHOP_DONE_KEY, String(pending.amount));
+    } finally {
+      campaignTransferRef.current = false;
+    }
+  };
+
+  const handleCampaignDeposit = async (amount: number): Promise<string | null> => {
+    if (!userData.id || !userData.email) return "Iniciá sesión para comprar INT.";
+
+    sessionStorage.setItem(
+      CAMPAIGN_SHOP_PENDING_KEY,
+      JSON.stringify({ amount, snapshot: userData.balance, ts: Date.now() })
+    );
+
+    const origin = isBrowser ? window.location.origin : "";
+    try {
+      const response = await api.createDepositCheckout({
+        userId: userData.id,
+        email: userData.email,
+        fullName: userData.profile.fullName || userData.profile.username || userData.email,
+        amount,
+        successUrl: `${origin}/?payment=success`,
+        errorUrl: `${origin}/?payment=error`,
+        pendingUrl: `${origin}/?payment=pending`,
+      });
+
+      if (response.data) {
+        if (isBrowser) {
+          window.location.href = response.data.checkoutUrl;
+        }
+        return null;
+      }
+
+      sessionStorage.removeItem(CAMPAIGN_SHOP_PENDING_KEY);
+      return response.error ?? "No pudimos iniciar Mercado Pago.";
+    } catch {
+      sessionStorage.removeItem(CAMPAIGN_SHOP_PENDING_KEY);
+      return "No pudimos iniciar Mercado Pago.";
+    }
   };
 
   const handleWithdraw = async (payload: {
@@ -1261,8 +1388,17 @@ function App() {
     return (
       <Marketplace
         userBalance={userData.balance}
-        onBack={handleBackToHome}
+        onBack={() => {
+          if (marketplaceFromCampaign) {
+            setMarketplaceFromCampaign(false);
+            setCurrentView("campaign");
+            return;
+          }
+          handleBackToHome();
+        }}
         onDeposit={handleDeposit}
+        campaignMode={marketplaceFromCampaign}
+        onCampaignBuy={handleCampaignDeposit}
       />
     );
   }
@@ -1272,7 +1408,17 @@ function App() {
   }
 
   if (currentView === "campaign") {
-    return <Campaign onBack={handleBackToHome} userId={userData.id} />;
+    return (
+      <Campaign
+        onBack={handleBackToHome}
+        userId={userData.id}
+        onOpenMarketplace={() => {
+          setMarketplaceFromCampaign(true);
+          setCurrentView("marketplace");
+        }}
+        onBuyCampaignPack={handleCampaignDeposit}
+      />
+    );
   }
 
   if (currentView === "tables") {

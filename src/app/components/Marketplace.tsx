@@ -6,6 +6,8 @@ interface MarketplaceProps {
   userBalance: number;
   onBack: () => void;
   onDeposit: (amount: number) => Promise<void>;
+  campaignMode?: boolean;
+  onCampaignBuy?: (amount: number) => Promise<string | null>;
 }
 
 const PACKAGES = [
@@ -16,13 +18,20 @@ const PACKAGES = [
   { amount: 20000, label: "20.000 INT", color: "from-[#FFD700] to-[#FFDF4F]" },
 ];
 
-export function Marketplace({ userBalance, onBack, onDeposit }: MarketplaceProps) {
+export function Marketplace({ userBalance, onBack, onDeposit, campaignMode = false, onCampaignBuy }: MarketplaceProps) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleBuy = async (amount: number) => {
     setLoading(true);
+    setError(null);
     try {
-      await onDeposit(amount);
+      if (campaignMode && onCampaignBuy) {
+        const failure = await onCampaignBuy(amount);
+        if (failure) setError(failure);
+      } else {
+        await onDeposit(amount);
+      }
     } finally {
       setLoading(false);
     }
@@ -56,7 +65,16 @@ export function Marketplace({ userBalance, onBack, onDeposit }: MarketplaceProps
           >
             MARKETPLACE
           </h1>
-          <p className="text-[#D2B48C] text-sm sm:text-base">Comprá monedas INT para seguir jugando</p>
+          <p className="text-[#D2B48C] text-sm sm:text-base">
+            {campaignMode
+              ? "Los INT comprados van directo a tu Campaña"
+              : "Comprá monedas INT para seguir jugando"}
+          </p>
+          {campaignMode ? (
+            <p className="inline-block mt-2 bg-[#D4AF37] text-[#3E2723] text-xs font-bold px-3 py-1 rounded-full">
+              MODO CAMPAÑA
+            </p>
+          ) : null}
           <div className="flex items-center justify-center gap-2 mt-3 p-3 rounded-lg border border-[#D4AF37]/50 bg-[#654321]/60">
             <IntIcon className="h-5 w-5 text-[12px] text-[#3E2723]" />
             <span className="text-[#FFD700] font-bold text-lg">Tu saldo: {formatInt(userBalance)}</span>
@@ -85,6 +103,8 @@ export function Marketplace({ userBalance, onBack, onDeposit }: MarketplaceProps
             </button>
           ))}
         </div>
+
+        {error ? <p className="text-red-300 text-sm text-center mt-4">{error}</p> : null}
 
         <p className="text-center text-[#D2B48C]/70 text-xs mt-6">
           1 ARS = 1 INT. Pago seguro por Mercado Pago.

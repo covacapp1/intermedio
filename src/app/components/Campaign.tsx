@@ -4,6 +4,7 @@ import { CampaignTown } from "./CampaignTown";
 import { CampaignTable } from "./CampaignTable";
 import { CampaignShop } from "./CampaignShop";
 import type { CampaignGameState, CampaignLocation, CampaignState } from "../types/campaign";
+import { formatMoney } from "../utils/deck";
 import {
   advanceRound,
   aiAction,
@@ -27,13 +28,17 @@ import {
 interface CampaignProps {
   onBack: () => void;
   userId: string;
+  onOpenMarketplace: () => void;
+  onBuyCampaignPack: (amount: number) => Promise<string | null>;
 }
 
 type Phase = "map" | "town" | "game";
 
 const AI_TURN_DELAY_MS = 900;
 
-export function Campaign({ onBack, userId }: CampaignProps) {
+export const CAMPAIGN_SHOP_DONE_KEY = "campaignShopDone";
+
+export function Campaign({ onBack, userId, onOpenMarketplace, onBuyCampaignPack }: CampaignProps) {
   const [campaignState, setCampaignState] = useState<CampaignState>(() => {
     const saved = userId ? loadCampaignState(userId) : null;
     return saved ?? createCampaignState();
@@ -42,6 +47,7 @@ export function Campaign({ onBack, userId }: CampaignProps) {
   const [gameState, setGameState] = useState<CampaignGameState | null>(null);
   const [activeBuildingId, setActiveBuildingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [shopOpen, setShopOpen] = useState(false);
   const finalizedRef = useRef(false);
   const shopPromptedRef = useRef(false);
@@ -49,6 +55,15 @@ export function Campaign({ onBack, userId }: CampaignProps) {
   useEffect(() => {
     if (userId) saveCampaignState(userId, campaignState);
   }, [campaignState, userId]);
+
+  useEffect(() => {
+    const done = sessionStorage.getItem(CAMPAIGN_SHOP_DONE_KEY);
+    if (!done) return;
+    sessionStorage.removeItem(CAMPAIGN_SHOP_DONE_KEY);
+    setSuccess(`¡Pago confirmado! Sumamos ${formatMoney(Number(done))} a tu campaña.`);
+    const timer = window.setTimeout(() => setSuccess(null), 6000);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     if (phase === "game") return;
@@ -144,12 +159,6 @@ export function Campaign({ onBack, userId }: CampaignProps) {
     setCampaignState(result.state);
   };
 
-  const handleShopBuy = (amount: number) => {
-    setCampaignState((prev) => ({ ...prev, balance: prev.balance + amount }));
-    setShopOpen(false);
-    shopPromptedRef.current = false;
-  };
-
   const handleClaimIncome = () => {
     setCampaignState((prev) => claimIncome(prev));
   };
@@ -227,7 +236,15 @@ export function Campaign({ onBack, userId }: CampaignProps) {
         />
         {error ? <ErrorBanner message={error} /> : null}
         {shopOpen ? (
-          <CampaignShop balance={campaignState.balance} onClose={() => setShopOpen(false)} onBuy={handleShopBuy} />
+          <CampaignShop
+            balance={campaignState.balance}
+            onClose={() => setShopOpen(false)}
+            onBuyPack={onBuyCampaignPack}
+            onOpenMarketplace={() => {
+              setShopOpen(false);
+              onOpenMarketplace();
+            }}
+          />
         ) : null}
       </div>
     );
@@ -243,8 +260,17 @@ export function Campaign({ onBack, userId }: CampaignProps) {
         onClaimIncome={handleClaimIncome}
       />
       {error ? <ErrorBanner message={error} /> : null}
+      {success ? <SuccessBanner message={success} /> : null}
       {shopOpen ? (
-        <CampaignShop balance={campaignState.balance} onClose={() => setShopOpen(false)} onBuy={handleShopBuy} />
+        <CampaignShop
+          balance={campaignState.balance}
+          onClose={() => setShopOpen(false)}
+          onBuyPack={onBuyCampaignPack}
+          onOpenMarketplace={() => {
+            setShopOpen(false);
+            onOpenMarketplace();
+          }}
+        />
       ) : null}
     </div>
   );
@@ -253,6 +279,14 @@ export function Campaign({ onBack, userId }: CampaignProps) {
 function ErrorBanner({ message }: { message: string }) {
   return (
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-[#8B4513] border-2 border-[#D4AF37] rounded-lg px-4 py-2 text-[#F5DEB3] text-sm shadow-lg max-w-[90%] text-center">
+      {message}
+    </div>
+  );
+}
+
+function SuccessBanner({ message }: { message: string }) {
+  return (
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-green-800 border-2 border-green-500 rounded-lg px-4 py-2 text-white text-sm shadow-lg max-w-[90%] text-center animate-pulse">
       {message}
     </div>
   );
