@@ -116,78 +116,9 @@ export function CampaignMap({
             className="relative w-full rounded-xl overflow-hidden border-2 border-[#5f3f1c]"
             style={{
               height: "350px",
-              background:
-                "radial-gradient(ellipse at 50% 22%, #ECCC93 0%, #DCB87A 42%, #C69D5D 72%, #A87F48 100%)",
-              boxShadow: "inset 0 0 55px rgba(74,45,22,0.55)",
+              background: "url(/map-bg.jpg) left center / cover no-repeat",
             }}
           >
-            {/* textura de papel viejo */}
-            <div
-              className="absolute inset-0 opacity-[0.10] pointer-events-none"
-              style={{
-                backgroundImage:
-                  "repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(101,67,33,0.6) 3px, rgba(101,67,33,0.6) 4px), repeating-linear-gradient(-45deg, transparent, transparent 5px, rgba(101,67,33,0.4) 5px, rgba(101,67,33,0.4) 6px)",
-              }}
-            />
-
-            {/* sol del viejo oeste */}
-            <div
-              className="absolute right-5 top-4 w-16 h-16 rounded-full pointer-events-none"
-              style={{
-                background: "radial-gradient(circle, #FBE7A8 0%, #F0C65A 55%, rgba(240,198,90,0) 72%)",
-                boxShadow: "0 0 34px 14px rgba(240,198,90,0.35)",
-              }}
-            />
-
-            {/* dunas y mesas al fondo */}
-            <svg
-              viewBox="0 0 720 90"
-              preserveAspectRatio="none"
-              className="absolute bottom-0 left-0 w-full h-[72px] pointer-events-none"
-            >
-              <path
-                d="M0 90 L0 58 Q70 38 140 55 Q200 30 260 52 Q330 34 400 54 Q470 32 540 52 Q610 36 660 50 Q695 44 720 52 L720 90 Z"
-                fill="#96632F"
-                opacity="0.5"
-              />
-              <path
-                d="M0 90 L0 70 Q90 52 170 68 Q250 50 330 66 Q420 50 500 68 Q580 54 650 66 Q690 60 720 66 L720 90 Z"
-                fill="#7A4E26"
-                opacity="0.8"
-              />
-            </svg>
-
-            {/* cactus izquierdo */}
-            <svg viewBox="0 0 44 64" className="absolute left-4 bottom-3 w-7 h-10 sm:w-9 sm:h-12 pointer-events-none">
-              <g fill="none" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 62 V14" stroke="#33481F" strokeWidth="13" />
-                <path d="M22 62 V14" stroke="#4E6B2F" strokeWidth="9" />
-                <path d="M22 44 H12 V30" stroke="#33481F" strokeWidth="10" />
-                <path d="M22 44 H12 V30" stroke="#4E6B2F" strokeWidth="6.5" />
-                <path d="M22 38 H32 V26" stroke="#33481F" strokeWidth="10" />
-                <path d="M22 38 H32 V26" stroke="#4E6B2F" strokeWidth="6.5" />
-              </g>
-            </svg>
-
-            {/* cactus derecho */}
-            <svg viewBox="0 0 44 64" className="absolute right-6 bottom-4 w-6 h-9 sm:w-7 sm:h-10 pointer-events-none opacity-90">
-              <g fill="none" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 62 V16" stroke="#33481F" strokeWidth="13" />
-                <path d="M22 62 V16" stroke="#4E6B2F" strokeWidth="9" />
-                <path d="M22 46 H12 V34" stroke="#33481F" strokeWidth="10" />
-                <path d="M22 46 H12 V34" stroke="#4E6B2F" strokeWidth="6.5" />
-              </g>
-            </svg>
-
-            {/* brújula */}
-            <svg viewBox="0 0 64 64" className="absolute left-3 top-3 w-10 h-10 sm:w-12 sm:h-12 opacity-75 pointer-events-none">
-              <circle cx="32" cy="34" r="24" fill="#E8D9B5" stroke="#6B4226" strokeWidth="3" opacity="0.85" />
-              <circle cx="32" cy="34" r="18" fill="none" stroke="#6B4226" strokeWidth="1" strokeDasharray="3 3" opacity="0.6" />
-              <path d="M32 14 L36 34 L32 31 L28 34 Z" fill="#8B2F1F" />
-              <path d="M32 54 L28 34 L32 37 L36 34 Z" fill="#3E2723" />
-              <circle cx="32" cy="34" r="3" fill="#6B4226" />
-            </svg>
-
             {/* marco interior estilo cuerda */}
             <div className="absolute inset-1.5 rounded-md border border-dashed border-[#5f3f1c]/40 pointer-events-none" />
 
