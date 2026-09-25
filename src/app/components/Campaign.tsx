@@ -3,6 +3,7 @@ import { CampaignMap } from "./CampaignMap";
 import { CampaignTown } from "./CampaignTown";
 import { CampaignTable } from "./CampaignTable";
 import { CampaignShop } from "./CampaignShop";
+import { Confetti } from "./Confetti";
 import type { CampaignGameState, CampaignLocation, CampaignState } from "../types/campaign";
 import { formatMoney } from "../utils/deck";
 import {
@@ -71,6 +72,7 @@ export function Campaign({
   const prevBalanceRef = useRef(campaignState.balance);
   const shopReloadedRef = useRef(false);
   const completionClaimedRef = useRef(false);
+  const [confettiOn, setConfettiOn] = useState(false);
 
   useEffect(() => {
     if (userId) saveCampaignState(userId, campaignState);
@@ -135,6 +137,8 @@ export function Campaign({
       if (result === "claimed") {
         setSuccess("🏆 ¡Campaña completada! Regalamos 5000 INT a tu Caja de Multijugador.");
         window.setTimeout(() => setSuccess(null), 20000);
+        setConfettiOn(true);
+        window.setTimeout(() => setConfettiOn(false), 5500);
       } else if (result === "error") {
         completionClaimedRef.current = false;
       }
@@ -278,18 +282,21 @@ export function Campaign({
     const you = gameState.players.find((p) => p.id === "you");
     const tableTitle = activeBuilding ? `${activeBuilding.icon} ${activeBuilding.name} — ${currentLocation.name}` : currentLocation.name;
     return (
-      <CampaignTable
-        gameState={gameState}
-        locationName={tableTitle}
-        campaignBalance={campaignState.balance + (you?.balance ?? 0)}
-        onBack={handleLeave}
-        onBet={handleBet}
-        onPass={handlePass}
-        onNextRound={handleNextRound}
-        onLeave={handleLeave}
-        gameOver={gameOver}
-        didWin={gameOver ? didYouWin(gameState) : false}
-      />
+      <>
+        <CampaignTable
+          gameState={gameState}
+          locationName={tableTitle}
+          campaignBalance={campaignState.balance + (you?.balance ?? 0)}
+          onBack={handleLeave}
+          onBet={handleBet}
+          onPass={handlePass}
+          onNextRound={handleNextRound}
+          onLeave={handleLeave}
+          gameOver={gameOver}
+          didWin={gameOver ? didYouWin(gameState) : false}
+        />
+        {confettiOn ? <Confetti /> : null}
+      </>
     );
   }
 
@@ -312,6 +319,7 @@ export function Campaign({
         />
         {error ? <ErrorBanner message={error} /> : null}
         {success ? <SuccessBanner message={success} /> : null}
+        {confettiOn ? <Confetti /> : null}
         {shopOpen ? (
           <CampaignShop
             balance={campaignState.balance}
@@ -339,6 +347,7 @@ export function Campaign({
       />
       {error ? <ErrorBanner message={error} /> : null}
       {success ? <SuccessBanner message={success} /> : null}
+      {confettiOn ? <Confetti /> : null}
       {shopOpen ? (
         <CampaignShop
           balance={campaignState.balance}
