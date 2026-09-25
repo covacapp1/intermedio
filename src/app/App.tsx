@@ -1272,7 +1272,7 @@ function App() {
   }
 
   if (currentView === "campaign") {
-    return <Campaign onBack={handleBackToHome} />;
+    return <Campaign onBack={handleBackToHome} userId={userData.id} />;
   }
 
   if (currentView === "tables") {
