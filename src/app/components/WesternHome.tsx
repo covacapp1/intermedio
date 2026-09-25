@@ -44,8 +44,6 @@ export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogo
   const isIOS = typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isAndroid = typeof navigator !== "undefined" && /Android/.test(navigator.userAgent);
 
-  if (isStandalone) return null;
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#8B4513] via-[#A0522D] to-[#654321] p-4 relative overflow-hidden flex flex-col">
       <div
@@ -114,13 +112,15 @@ export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogo
           <WesternButton onClick={() => onNavigate("profile")}>PERFIL</WesternButton>
           <WesternButton onClick={() => onNavigate("tables")}>LOBBY</WesternButton>
           <WesternButton onClick={() => onNavigate("createTable")}>CREAR MESA</WesternButton>
-          <button
-            onClick={handleInstall}
-            className="w-full py-3 sm:py-4 bg-gradient-to-b from-[#2d9a68] to-[#1f6b47] text-white font-bold text-base sm:text-lg border-4 border-[#654321] rounded-lg shadow-[0_8px_20px_rgba(0,0,0,0.6)] hover:from-[#38b577] hover:to-[#2d9a68] transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
-          >
-            <Download className="w-5 h-5" />
-            Instalar App
-          </button>
+          {!isStandalone && (
+            <button
+              onClick={handleInstall}
+              className="w-full py-3 sm:py-4 bg-gradient-to-b from-[#2d9a68] to-[#1f6b47] text-white font-bold text-base sm:text-lg border-4 border-[#654321] rounded-lg shadow-[0_8px_20px_rgba(0,0,0,0.6)] hover:from-[#38b577] hover:to-[#2d9a68] transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+            >
+              <Download className="w-5 h-5" />
+              Instalar App
+            </button>
+          )}
         </div>
 
         {showInstallHelp && (
