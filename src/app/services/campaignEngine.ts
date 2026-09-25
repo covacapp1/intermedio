@@ -24,7 +24,7 @@ export const TOWN_DEFS: TownDef[] = [
       { id: "ferrocarril", name: "Ferrocarril", icon: "🚂", difficulty: "facil" },
     ],
     properties: [
-      { id: "casa-chiquita", name: "Casa Chiquita", icon: "🛖", price: 60, income: 5 },
+      { id: "casa-chiquita", name: "Casa Chiquita", icon: "🏠", price: 60, income: 5 },
       { id: "casa-azul", name: "Casa Azul", icon: "🏠", price: 100, income: 10 },
       { id: "casa-roja", name: "Casa Roja", icon: "🏡", price: 150, income: 10 },
     ],
@@ -37,7 +37,7 @@ export const TOWN_DEFS: TownDef[] = [
       { id: "correo-real", name: "Correo Real", icon: "📮", difficulty: "facil" },
     ],
     properties: [
-      { id: "cabaña", name: "Cabaña", icon: "🛖", price: 100, income: 5 },
+      { id: "cabaña", name: "Cabaña", icon: "⛺", price: 100, income: 5 },
       { id: "casa-amarilla", name: "Casa Amarilla", icon: "🏠", price: 150, income: 10 },
       { id: "casa-azuleja", name: "Casa Azuleja", icon: "🏡", price: 200, income: 10 },
     ],
@@ -112,7 +112,7 @@ export const TOWN_DEFS: TownDef[] = [
     play: [
       { id: "salon-poder", name: "Salón del Poder", icon: "🎩", difficulty: "experto" },
       { id: "residencia-poder", name: "Residencia del Poder", icon: "🏯", difficulty: "experto" },
-      { id: "trono-dorado", name: "Trono Dorado", icon: "🪑", difficulty: "experto" },
+      { id: "trono-dorado", name: "Trono Dorado", icon: "👑", difficulty: "experto" },
     ],
     properties: [
       { id: "casa-gobernador", name: "Casa del Gobernador", icon: "🏠", price: 700, income: 30 },

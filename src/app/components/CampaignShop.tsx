@@ -41,7 +41,11 @@ export function CampaignShop({ balance, onClose, onBuyPack }: CampaignShopProps)
         </button>
 
         <div className="text-center mb-4">
-          <div className="text-4xl mb-2">🪙</div>
+          <img
+            src="/logo.png"
+            alt="Intermedio Cards"
+            className="mx-auto mb-3 h-24 sm:h-28 w-auto object-contain drop-shadow-[0_4px_10px_rgba(0,0,0,0.6)]"
+          />
           <h2 className="text-xl font-bold text-[#F5DEB3]" style={{ fontFamily: "serif" }}>
             ¡Te quedaste sin INT!
           </h2>
