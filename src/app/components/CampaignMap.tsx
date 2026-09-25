@@ -1,11 +1,14 @@
-import { ArrowLeft, Lock, CheckCircle, Coins } from "lucide-react";
+import { ArrowLeft, Lock, CheckCircle, Coins, Wallet } from "lucide-react";
 import type { CampaignState, CampaignLocation } from "../types/campaign";
 import { formatMoney } from "../utils/deck";
+import { getTownDef, townCompleted } from "../services/campaignEngine";
 
 interface CampaignMapProps {
   campaignState: CampaignState;
+  pendingIncome: number;
   onBack: () => void;
   onSelectLocation: (location: CampaignLocation) => void;
+  onClaimIncome: () => void;
 }
 
 const DIFFICULTY_COLORS: Record<string, string> = {
@@ -22,7 +25,15 @@ const DIFFICULTY_LABELS: Record<string, string> = {
   experto: "Experto",
 };
 
-export function CampaignMap({ campaignState, onBack, onSelectLocation }: CampaignMapProps) {
+export function CampaignMap({ campaignState, pendingIncome, onBack, onSelectLocation, onClaimIncome }: CampaignMapProps) {
+  const dailyIncome = campaignState.ownedProperties.reduce((sum, key) => {
+    const sep = key.indexOf(":");
+    if (sep === -1) return sum;
+    const town = getTownDef(key.slice(0, sep));
+    const prop = town?.properties.find((p) => p.id === key.slice(sep + 1));
+    return sum + (prop?.income ?? 0);
+  }, 0);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#8B4513] via-[#A0522D] to-[#654321] p-4">
       <div className="max-w-3xl mx-auto pt-6">
@@ -34,9 +45,20 @@ export function CampaignMap({ campaignState, onBack, onSelectLocation }: Campaig
             <ArrowLeft className="w-5 h-5" />
             Volver
           </button>
-          <div className="flex items-center gap-2 bg-[#3E2723] border-2 border-[#D4AF37] rounded-lg px-3 py-1.5">
-            <Coins className="w-4 h-4 text-[#D4AF37]" />
-            <span className="text-[#F5DEB3] font-bold text-sm">{formatMoney(campaignState.balance)}</span>
+          <div className="flex items-center gap-2">
+            {pendingIncome > 0 ? (
+              <button
+                onClick={onClaimIncome}
+                className="flex items-center gap-1.5 bg-green-700 border-2 border-green-500 rounded-lg px-3 py-1.5 text-white font-bold text-xs animate-pulse hover:bg-green-600 transition-colors"
+              >
+                <Wallet className="w-3.5 h-3.5" />
+                Cobrar {formatMoney(pendingIncome)}
+              </button>
+            ) : null}
+            <div className="flex items-center gap-2 bg-[#3E2723] border-2 border-[#D4AF37] rounded-lg px-3 py-1.5">
+              <Coins className="w-4 h-4 text-[#D4AF37]" />
+              <span className="text-[#F5DEB3] font-bold text-sm">{formatMoney(campaignState.balance)}</span>
+            </div>
           </div>
         </div>
 
@@ -118,7 +140,12 @@ export function CampaignMap({ campaignState, onBack, onSelectLocation }: Campaig
                   className="text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded text-white"
                   style={{ background: DIFFICULTY_COLORS[loc.difficulty] }}
                 >
-                  {formatMoney(loc.buyIn)}
+                  {(() => {
+                    const town = getTownDef(loc.id);
+                    const done = townCompleted(campaignState, loc.id);
+                    if (!town) return "";
+                    return done ? "✓ Completado" : `${town.play.length} lugares`;
+                  })()}
                 </span>
               </button>
             ))}
@@ -134,6 +161,14 @@ export function CampaignMap({ campaignState, onBack, onSelectLocation }: Campaig
                 <span className="text-[#D2B48C] text-xs">{DIFFICULTY_LABELS[d]}</span>
               </div>
             ))}
+          </div>
+          <div className="mt-3 pt-3 border-t border-[#654321] flex items-center justify-between text-xs">
+            <span className="text-[#D2B48C]">
+              🏠 Propiedades: <strong className="text-[#F5DEB3]">{campaignState.ownedProperties.length}</strong>
+            </span>
+            <span className="text-[#D2B48C]">
+              Rinde: <strong className="text-green-400">{formatMoney(dailyIncome)} / día</strong>
+            </span>
           </div>
         </div>
       </div>

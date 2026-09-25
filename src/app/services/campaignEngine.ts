@@ -1,11 +1,199 @@
 import { createDeck, shuffleDeck, evaluateHand } from "../utils/deck";
-import type { CampaignGameState, CampaignPlayer, CampaignLocation, CampaignState } from "../types/campaign";
+import type { CampaignGameState, CampaignPlayer, CampaignLocation, CampaignState, TownDef } from "../types/campaign";
 
 const AI_NAMES = [
   "El Rápido", "La Viuda", "Cara de Piedra", "Mano Fría",
   "El Zorro", "Doña Suerte", "Terciopelo", "El Reloj",
   "Sombra", "La Cobra", "Pistolero", "El Escorpión",
 ];
+
+export const MATCH_BUY_IN = 50;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export const TOWN_DEFS: TownDef[] = [
+  {
+    townId: "saloon1",
+    play: [
+      { id: "casa-fierro", name: "Casa de Fierro", icon: "🏠", difficulty: "facil" },
+      { id: "casa-vieja", name: "Casa Vieja", icon: "🏡", difficulty: "facil" },
+      { id: "bar-polvo", name: "Bar del Polvo", icon: "🍺", difficulty: "facil" },
+      { id: "ferrocarril", name: "Ferrocarril", icon: "🚂", difficulty: "facil" },
+    ],
+    properties: [
+      { id: "casa-chiquita", name: "Casa Chiquita", icon: "🛖", price: 60, income: 5 },
+      { id: "casa-azul", name: "Casa Azul", icon: "🏠", price: 100, income: 10 },
+      { id: "casa-roja", name: "Casa Roja", icon: "🏡", price: 150, income: 10 },
+    ],
+  },
+  {
+    townId: "pueblo2",
+    play: [
+      { id: "cantina-roja", name: "Cantina Roja", icon: "🍺", difficulty: "facil" },
+      { id: "casa-herrero", name: "Casa del Herrero", icon: "🔨", difficulty: "facil" },
+      { id: "correo-real", name: "Correo Real", icon: "📮", difficulty: "facil" },
+    ],
+    properties: [
+      { id: "cabaña", name: "Cabaña", icon: "🛖", price: 100, income: 5 },
+      { id: "casa-amarilla", name: "Casa Amarilla", icon: "🏠", price: 150, income: 10 },
+      { id: "casa-azuleja", name: "Casa Azuleja", icon: "🏡", price: 200, income: 10 },
+    ],
+  },
+  {
+    townId: "mina3",
+    play: [
+      { id: "mina-profunda", name: "Mina Profunda", icon: "⛏", difficulty: "normal" },
+      { id: "casa-mineros", name: "Casa de Mineros", icon: "🏚", difficulty: "normal" },
+      { id: "pulperia", name: "Pulpería", icon: "🏪", difficulty: "normal" },
+    ],
+    properties: [
+      { id: "taller-mina", name: "Taller de la Mina", icon: "🔧", price: 150, income: 10 },
+      { id: "casa-minera", name: "Casa Minera", icon: "🏠", price: 250, income: 15 },
+      { id: "casa-mina", name: "Casa de la Mina", icon: "🏡", price: 200, income: 10 },
+    ],
+  },
+  {
+    townId: "rio4",
+    play: [
+      { id: "puerto-viejo", name: "Puerto Viejo", icon: "⚓", difficulty: "normal" },
+      { id: "almacen", name: "Almacén", icon: "🏪", difficulty: "normal" },
+      { id: "barco-vapor", name: "Barco de Vapor", icon: "🚢", difficulty: "normal" },
+    ],
+    properties: [
+      { id: "barcaza", name: "Barcaza", icon: "🛶", price: 200, income: 10 },
+      { id: "casa-puerto", name: "Casa del Puerto", icon: "🏠", price: 250, income: 15 },
+      { id: "deposito", name: "Depósito", icon: "🏚", price: 300, income: 15 },
+    ],
+  },
+  {
+    townId: "ciudad5",
+    play: [
+      { id: "banco-central", name: "Banco Central", icon: "🏦", difficulty: "dificil" },
+      { id: "gran-teatro", name: "Gran Teatro", icon: "🎭", difficulty: "dificil" },
+      { id: "hotel-imperial", name: "Hotel Imperial", icon: "🏨", difficulty: "dificil" },
+    ],
+    properties: [
+      { id: "local-comercial", name: "Local Comercial", icon: "🏪", price: 250, income: 15 },
+      { id: "casa-ciudad", name: "Casa de la Ciudad", icon: "🏠", price: 300, income: 15 },
+      { id: "edificio-central", name: "Edificio Central", icon: "🏢", price: 350, income: 20 },
+    ],
+  },
+  {
+    townId: "fortin6",
+    play: [
+      { id: "fortin", name: "El Fortín", icon: "🏰", difficulty: "dificil" },
+      { id: "armeria", name: "Armería", icon: "⚔️", difficulty: "dificil" },
+      { id: "torre-vigia", name: "Torre Vigía", icon: "🗼", difficulty: "dificil" },
+    ],
+    properties: [
+      { id: "casa-alta", name: "Casa Alta", icon: "🏡", price: 350, income: 15 },
+      { id: "casa-fortin", name: "Casa del Fortín", icon: "🏠", price: 400, income: 20 },
+      { id: "bunker", name: "Búnker", icon: "🛡", price: 450, income: 20 },
+    ],
+  },
+  {
+    townId: "capital7",
+    play: [
+      { id: "palacio-real", name: "Palacio Real", icon: "👑", difficulty: "experto" },
+      { id: "casino-real", name: "Casino Real", icon: "🎰", difficulty: "experto" },
+      { id: "corte-suprema", name: "Corte Suprema", icon: "🏛", difficulty: "experto" },
+    ],
+    properties: [
+      { id: "casa-noble", name: "Casa Noble", icon: "🏰", price: 450, income: 20 },
+      { id: "torre-oficinas", name: "Torre de Oficinas", icon: "🏢", price: 500, income: 20 },
+      { id: "mansion", name: "Mansión", icon: "🏯", price: 600, income: 25 },
+    ],
+  },
+  {
+    townId: "gobernador8",
+    play: [
+      { id: "salon-poder", name: "Salón del Poder", icon: "🎩", difficulty: "experto" },
+      { id: "residencia-poder", name: "Residencia del Poder", icon: "🏯", difficulty: "experto" },
+      { id: "trono-dorado", name: "Trono Dorado", icon: "🪑", difficulty: "experto" },
+    ],
+    properties: [
+      { id: "casa-gobernador", name: "Casa del Gobernador", icon: "🏠", price: 700, income: 30 },
+      { id: "residencia-dorada", name: "Residencia Dorada", icon: "🏛", price: 800, income: 30 },
+      { id: "palacio-privado", name: "Palacio Privado", icon: "🏯", price: 900, income: 35 },
+    ],
+  },
+];
+
+export function getTownDef(townId: string): TownDef | null {
+  return TOWN_DEFS.find((t) => t.townId === townId) ?? null;
+}
+
+export function createCampaignState(): CampaignState {
+  return {
+    balance: 500,
+    locations: DEFAULT_CAMPAIGN_LOCATIONS.map((l) => ({ ...l })),
+    currentLocationId: null,
+    totalWon: 0,
+    totalLost: 0,
+    gamesPlayed: 0,
+    gamesWon: 0,
+    ownedProperties: [],
+    completedBuildings: [],
+    lastIncomeClaimAt: Date.now(),
+  };
+}
+
+function propertyByKey(key: string): { price: number; income: number; townId: string } | null {
+  const sep = key.indexOf(":");
+  if (sep === -1) return null;
+  const townId = key.slice(0, sep);
+  const propId = key.slice(sep + 1);
+  const town = getTownDef(townId);
+  const prop = town?.properties.find((p) => p.id === propId);
+  return prop ? { price: prop.price, income: prop.income, townId } : null;
+}
+
+export function getPendingIncome(state: CampaignState): number {
+  if (state.ownedProperties.length === 0) return 0;
+  const days = Math.floor((Date.now() - state.lastIncomeClaimAt) / DAY_MS);
+  if (days <= 0) return 0;
+  return state.ownedProperties.reduce((sum, key) => sum + (propertyByKey(key)?.income ?? 0), 0) * days;
+}
+
+export function claimIncome(state: CampaignState): CampaignState {
+  const pending = getPendingIncome(state);
+  if (pending <= 0) return state;
+  const days = Math.floor((Date.now() - state.lastIncomeClaimAt) / DAY_MS);
+  return {
+    ...state,
+    balance: state.balance + pending,
+    totalWon: state.totalWon + pending,
+    lastIncomeClaimAt: state.lastIncomeClaimAt + days * DAY_MS,
+  };
+}
+
+export function buyProperty(
+  state: CampaignState,
+  townId: string,
+  propertyId: string
+): { ok: boolean; state: CampaignState; error?: string } {
+  const key = `${townId}:${propertyId}`;
+  const def = propertyByKey(key);
+  if (!def) return { ok: false, state, error: "Propiedad no encontrada." };
+  if (state.ownedProperties.includes(key)) return { ok: false, state, error: "Ya es tuya." };
+  if (state.balance < def.price) {
+    return { ok: false, state, error: `Necesitás ${def.price} INT. Tenés ${state.balance} INT.` };
+  }
+  return {
+    ok: true,
+    state: {
+      ...state,
+      balance: state.balance - def.price,
+      ownedProperties: [...state.ownedProperties, key],
+      lastIncomeClaimAt: state.ownedProperties.length === 0 ? Date.now() : state.lastIncomeClaimAt,
+    },
+  };
+}
+
+export function townCompleted(state: CampaignState, townId: string): boolean {
+  const town = getTownDef(townId);
+  if (!town || town.play.length === 0) return false;
+  return town.play.every((b) => state.completedBuildings.includes(`${townId}:${b.id}`));
+}
 
 export const DEFAULT_CAMPAIGN_LOCATIONS: CampaignLocation[] = [
   { id: "saloon1", name: "Salón del Polvo", description: "El primer salón. Fácil.", buyIn: 50, aiCount: 5, difficulty: "facil", unlocked: true, completed: false, x: 15, y: 75, icon: "🍺" },
@@ -17,18 +205,6 @@ export const DEFAULT_CAMPAIGN_LOCATIONS: CampaignLocation[] = [
   { id: "capital7", name: "La Capital", description: "Antes del jefe final.", buyIn: 50, aiCount: 5, difficulty: "experto", unlocked: false, completed: false, x: 88, y: 20, icon: "👑" },
   { id: "gobernador8", name: "Residencia del Gobernador", description: "El desafío final.", buyIn: 50, aiCount: 5, difficulty: "experto", unlocked: false, completed: false, x: 92, y: 8, icon: "🏆" },
 ];
-
-export function createCampaignState(): CampaignState {
-  return {
-    balance: 500,
-    locations: DEFAULT_CAMPAIGN_LOCATIONS.map((l) => ({ ...l })),
-    currentLocationId: null,
-    totalWon: 0,
-    totalLost: 0,
-    gamesPlayed: 0,
-    gamesWon: 0,
-  };
-}
 
 function randomName(used: Set<string>): string {
   const available = AI_NAMES.filter((n) => !used.has(n));
@@ -238,6 +414,10 @@ export function loadCampaignState(userId: string): CampaignState | null {
       const saved = parsed.locations.find((l) => l.id === d.id);
       return saved ? { ...d, unlocked: saved.unlocked, completed: saved.completed } : { ...d };
     });
+    if (!Array.isArray(parsed.ownedProperties)) parsed.ownedProperties = [];
+    if (!Array.isArray(parsed.completedBuildings)) parsed.completedBuildings = [];
+    if (typeof parsed.lastIncomeClaimAt !== "number") parsed.lastIncomeClaimAt = Date.now();
+    if (parsed.balance < MATCH_BUY_IN) parsed.balance = MATCH_BUY_IN;
     return parsed;
   } catch {
     return null;
