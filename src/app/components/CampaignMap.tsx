@@ -1,4 +1,4 @@
-import { ArrowLeft, Lock, CheckCircle, Coins, Wallet, ScrollText } from "lucide-react";
+import { ArrowLeft, Lock, CheckCircle, Coins, Wallet, ScrollText, ShoppingBag } from "lucide-react";
 import type { CampaignState, CampaignLocation } from "../types/campaign";
 import { formatMoney } from "../utils/deck";
 import { getTownDef, townCompleted } from "../services/campaignEngine";
@@ -11,6 +11,7 @@ interface CampaignMapProps {
   onSelectLocation: (location: CampaignLocation) => void;
   onClaimIncome: () => void;
   onShowRules: () => void;
+  onOpenShop: () => void;
 }
 
 const DIFFICULTY_COLORS: Record<string, string> = {
@@ -35,6 +36,7 @@ export function CampaignMap({
   onSelectLocation,
   onClaimIncome,
   onShowRules,
+  onOpenShop,
 }: CampaignMapProps) {
   const dailyIncome = campaignState.ownedProperties.reduce((sum, key) => {
     const sep = key.indexOf(":");
@@ -47,7 +49,7 @@ export function CampaignMap({
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#8B4513] via-[#A0522D] to-[#654321] p-4">
       <div className="max-w-3xl mx-auto pt-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
           <button
             onClick={onBack}
             className="flex items-center gap-2 text-[#F5DEB3] font-semibold hover:text-white transition-colors"
@@ -55,7 +57,7 @@ export function CampaignMap({
             <ArrowLeft className="w-5 h-5" />
             Volver
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             {pendingIncome > 0 ? (
               <button
                 onClick={onClaimIncome}
@@ -65,6 +67,13 @@ export function CampaignMap({
                 Cobrar {formatMoney(pendingIncome)}
               </button>
             ) : null}
+            <button
+              onClick={onOpenShop}
+              className="flex items-center gap-1.5 bg-gradient-to-b from-[#D4AF37] to-[#B8941E] border-2 border-[#654321] rounded-lg px-3 py-1.5 text-[#3E2723] font-bold text-xs hover:from-[#FFD700] hover:to-[#D4AF37] transition-colors"
+            >
+              <ShoppingBag className="w-3.5 h-3.5" />
+              Comprar INT
+            </button>
             <button
               onClick={onShowRules}
               className="flex items-center gap-1.5 bg-[#3E2723] border-2 border-[#D4AF37] rounded-lg px-3 py-1.5 text-[#F5DEB3] font-bold text-xs hover:bg-[#4E3723] transition-colors"

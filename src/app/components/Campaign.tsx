@@ -318,6 +318,7 @@ export function Campaign({
           onBuyProperty={handleBuyProperty}
           onClaimIncome={handleClaimIncome}
           onSkipUnlock={handleSkipUnlock}
+          onOpenShop={() => setShopOpen(true)}
         />
         {error ? <ErrorBanner message={error} /> : null}
         {success ? <SuccessBanner message={success} /> : null}
@@ -347,6 +348,7 @@ export function Campaign({
         onSelectLocation={handleSelectLocation}
         onClaimIncome={handleClaimIncome}
         onShowRules={() => setRulesOpen(true)}
+        onOpenShop={() => setShopOpen(true)}
       />
       {rulesOpen ? <CampaignRules onClose={() => setRulesOpen(false)} /> : null}
       {error ? <ErrorBanner message={error} /> : null}

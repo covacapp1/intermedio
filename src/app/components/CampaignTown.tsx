@@ -1,4 +1,4 @@
-import { ArrowLeft, Coins, Lock, CheckCircle, Wallet, FastForward } from "lucide-react";
+import { ArrowLeft, Coins, Lock, CheckCircle, Wallet, FastForward, ShoppingBag } from "lucide-react";
 import type { CampaignLocation, CampaignState, TownDef } from "../types/campaign";
 import { formatMoney } from "../utils/deck";
 import { SKIP_UNLOCK_PRICE } from "../services/campaignEngine";
@@ -13,6 +13,7 @@ interface CampaignTownProps {
   onBuyProperty: (propertyId: string) => void;
   onClaimIncome: () => void;
   onSkipUnlock: () => void;
+  onOpenShop: () => void;
 }
 
 const DIFFICULTY_COLORS: Record<string, string> = {
@@ -39,6 +40,7 @@ export function CampaignTown({
   onBuyProperty,
   onClaimIncome,
   onSkipUnlock,
+  onOpenShop,
 }: CampaignTownProps) {
   const completedCount = townDef.play.filter((b) =>
     campaignState.completedBuildings.includes(`${townDef.townId}:${b.id}`)
@@ -65,7 +67,7 @@ export function CampaignTown({
             <ArrowLeft className="w-4 h-4" />
             Mapa
           </button>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-3">
             {pendingIncome > 0 ? (
               <button
                 onClick={onClaimIncome}
@@ -75,6 +77,13 @@ export function CampaignTown({
                 Cobrar {formatMoney(pendingIncome)}
               </button>
             ) : null}
+            <button
+              onClick={onOpenShop}
+              className="flex items-center gap-1.5 bg-gradient-to-b from-[#D4AF37] to-[#B8941E] border-2 border-[#654321] rounded-lg px-3 py-1.5 text-[#3E2723] font-bold text-xs hover:from-[#FFD700] hover:to-[#D4AF37] transition-colors"
+            >
+              <ShoppingBag className="w-3.5 h-3.5" />
+              Comprar INT
+            </button>
             <div className="flex items-center gap-2 bg-[#3E2723] border-2 border-[#D4AF37] rounded-lg px-3 py-1.5">
               <Coins className="w-4 h-4 text-[#D4AF37]" />
               <span className="text-[#F5DEB3] font-bold text-sm">{formatMoney(campaignState.balance)}</span>
