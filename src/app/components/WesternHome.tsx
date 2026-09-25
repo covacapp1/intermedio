@@ -7,7 +7,7 @@ interface WesternHomeProps {
   userName: string;
   userBalance: number;
   isAdmin: boolean;
-  onNavigate: (view: "profile" | "tables" | "createTable" | "cashier" | "ads" | "admin" | "marketplace" | "terms") => void;
+  onNavigate: (view: "profile" | "tables" | "createTable" | "cashier" | "ads" | "admin" | "marketplace" | "terms" | "campaign") => void;
   onLogout: () => void;
 }
 
@@ -75,6 +75,7 @@ export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogo
             </p>
           </div>
           {isAdmin ? <MenuEntry label="Cajero" onClick={() => onNavigate("cashier")} /> : null}
+          <MenuEntry label="Campaña" onClick={() => onNavigate("campaign")} />
           <MenuEntry label="Marketplace" onClick={() => onNavigate("marketplace")} />
           <MenuEntry label="Anuncios" onClick={() => onNavigate("ads")} />
           {isAdmin ? <MenuEntry label="Admin" onClick={() => onNavigate("admin")} /> : null}
