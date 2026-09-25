@@ -30,6 +30,9 @@ interface CampaignProps {
   userId: string;
   onOpenMarketplace: () => void;
   onBuyCampaignPack: (amount: number) => Promise<string | null>;
+  onPullCampaignBalance: () => Promise<number | null>;
+  onSyncCampaignBalance: (balance: number) => void;
+  shopCreditVersion: number;
 }
 
 type Phase = "map" | "town" | "game";
@@ -38,7 +41,15 @@ const AI_TURN_DELAY_MS = 900;
 
 export const CAMPAIGN_SHOP_DONE_KEY = "campaignShopDone";
 
-export function Campaign({ onBack, userId, onOpenMarketplace, onBuyCampaignPack }: CampaignProps) {
+export function Campaign({
+  onBack,
+  userId,
+  onOpenMarketplace,
+  onBuyCampaignPack,
+  onPullCampaignBalance,
+  onSyncCampaignBalance,
+  shopCreditVersion,
+}: CampaignProps) {
   const [campaignState, setCampaignState] = useState<CampaignState>(() => {
     const saved = userId ? loadCampaignState(userId) : null;
     return saved ?? createCampaignState();
@@ -51,19 +62,64 @@ export function Campaign({ onBack, userId, onOpenMarketplace, onBuyCampaignPack 
   const [shopOpen, setShopOpen] = useState(false);
   const finalizedRef = useRef(false);
   const shopPromptedRef = useRef(false);
+  const lastPushedRef = useRef<number | null>(null);
+  const prevBalanceRef = useRef(campaignState.balance);
+  const shopReloadedRef = useRef(false);
 
   useEffect(() => {
     if (userId) saveCampaignState(userId, campaignState);
   }, [campaignState, userId]);
 
   useEffect(() => {
+    if (campaignState.balance === prevBalanceRef.current) return;
+    prevBalanceRef.current = campaignState.balance;
+    lastPushedRef.current = campaignState.balance;
+    onSyncCampaignBalance(campaignState.balance);
+  }, [campaignState.balance, onSyncCampaignBalance]);
+
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    void onPullCampaignBalance().then((serverBalance) => {
+      if (cancelled || serverBalance === null) return;
+      if (lastPushedRef.current !== null || shopReloadedRef.current) return;
+      setCampaignState((prev) =>
+        prev.balance === serverBalance ? prev : { ...prev, balance: serverBalance }
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  const showSuccessBanner = (amount: number) => {
+    setSuccess(`¡Pago confirmado! Sumamos ${formatMoney(amount)} a tu campaña.`);
+    window.setTimeout(() => setSuccess(null), 6000);
+  };
+
+  useEffect(() => {
     const done = sessionStorage.getItem(CAMPAIGN_SHOP_DONE_KEY);
     if (!done) return;
     sessionStorage.removeItem(CAMPAIGN_SHOP_DONE_KEY);
-    setSuccess(`¡Pago confirmado! Sumamos ${formatMoney(Number(done))} a tu campaña.`);
-    const timer = window.setTimeout(() => setSuccess(null), 6000);
-    return () => window.clearTimeout(timer);
+    showSuccessBanner(Number(done));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!shopCreditVersion || !userId) return;
+    const fresh = loadCampaignState(userId);
+    if (fresh) {
+      shopReloadedRef.current = true;
+      setCampaignState(fresh);
+    }
+    const done = sessionStorage.getItem(CAMPAIGN_SHOP_DONE_KEY);
+    if (done) {
+      sessionStorage.removeItem(CAMPAIGN_SHOP_DONE_KEY);
+      showSuccessBanner(Number(done));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shopCreditVersion, userId]);
 
   useEffect(() => {
     if (phase === "game") return;

@@ -86,6 +86,7 @@ interface WalletSummary {
   userId: string;
   email: string;
   balance: number;
+  campaignBalance?: number;
   transactions: WalletTransaction[];
   withdrawals: WithdrawalRequest[];
   updatedAt: number;
@@ -1369,6 +1370,7 @@ app.get("/server/wallet/admin/users", async (c) => {
       userId: wallet.userId,
       email: wallet.email,
       balance: wallet.balance,
+      campaignBalance: wallet.campaignBalance ?? 0,
     }));
 
     return c.json({ users });
@@ -1407,6 +1409,64 @@ app.post("/server/wallet/admin/users/:userId/balance", async (c) => {
   } catch (error) {
     console.log("Error updating user balance:", error);
     return c.json({ error: "Failed to update balance" }, 500);
+  }
+});
+
+app.post("/server/wallet/admin/users/:userId/campaign-balance", async (c) => {
+  try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
+    const forbiddenResponse = ensureAdmin(c, auth.user);
+    if (forbiddenResponse) {
+      return forbiddenResponse;
+    }
+
+    const targetUserId = c.req.param("userId");
+    const body = await c.req.json();
+    const { balance: newBalance } = body;
+
+    if (typeof newBalance !== "number" || newBalance < 0 || !Number.isFinite(newBalance)) {
+      return c.json({ error: "Invalid balance value" }, 400);
+    }
+
+    const wallet = await getWallet(targetUserId, "");
+    wallet.campaignBalance = Math.floor(newBalance);
+    wallet.updatedAt = Date.now();
+    await saveWallet(wallet);
+
+    return c.json({ success: true, userId: targetUserId, campaignBalance: wallet.campaignBalance });
+  } catch (error) {
+    console.log("Error updating campaign balance:", error);
+    return c.json({ error: "Failed to update campaign balance" }, 500);
+  }
+});
+
+app.post("/server/wallet/campaign-balance", async (c) => {
+  try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
+    const body = await c.req.json();
+    const { balance: newBalance } = body;
+
+    if (typeof newBalance !== "number" || newBalance < 0 || !Number.isFinite(newBalance)) {
+      return c.json({ error: "Invalid balance value" }, 400);
+    }
+
+    const wallet = await getWallet(auth.user.id, auth.user.email);
+    wallet.campaignBalance = Math.floor(newBalance);
+    wallet.updatedAt = Date.now();
+    const saved = await saveWallet(wallet);
+
+    return c.json(saved);
+  } catch (error) {
+    console.log("Error syncing campaign balance:", error);
+    return c.json({ error: "Failed to sync campaign balance" }, 500);
   }
 });
 

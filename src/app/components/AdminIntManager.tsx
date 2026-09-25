@@ -5,6 +5,7 @@ interface UserIntInfo {
   userId: string;
   email: string;
   balance: number;
+  campaignBalance?: number;
 }
 
 interface AdminIntManagerProps {
@@ -12,23 +13,31 @@ interface AdminIntManagerProps {
   onBack: () => void;
   onRefresh: () => Promise<void>;
   onUpdateBalance: (userId: string, newBalance: number) => Promise<void>;
+  onUpdateCampaignBalance: (userId: string, newBalance: number) => Promise<void>;
 }
+
+type BalanceTab = "main" | "campaign";
 
 export function AdminIntManager({
   users,
   onBack,
   onRefresh,
   onUpdateBalance,
+  onUpdateCampaignBalance,
 }: AdminIntManagerProps) {
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>("");
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [tab, setTab] = useState<BalanceTab>("main");
 
-  const handleEdit = useCallback((user: UserIntInfo) => {
-    setEditingUserId(user.userId);
-    setEditValue(user.balance.toString());
-  }, []);
+  const handleEdit = useCallback(
+    (user: UserIntInfo) => {
+      setEditingUserId(user.userId);
+      setEditValue((tab === "campaign" ? user.campaignBalance ?? 0 : user.balance).toString());
+    },
+    [tab]
+  );
 
   const handleCancel = useCallback(() => {
     setEditingUserId(null);
@@ -45,14 +54,18 @@ export function AdminIntManager({
 
       setUpdatingUserId(userId);
       try {
-        await onUpdateBalance(userId, newBalance);
+        if (tab === "campaign") {
+          await onUpdateCampaignBalance(userId, newBalance);
+        } else {
+          await onUpdateBalance(userId, newBalance);
+        }
         setEditingUserId(null);
         setEditValue("");
       } finally {
         setUpdatingUserId(null);
       }
     },
-    [editValue, onUpdateBalance]
+    [editValue, onUpdateBalance, onUpdateCampaignBalance, tab]
   );
 
   const filteredUsers = users.filter(
@@ -84,11 +97,44 @@ export function AdminIntManager({
           style={{ background: "linear-gradient(135deg, #654321 0%, #8B4513 50%, #654321 100%)" }}
         >
           <h1 className="text-4xl font-bold text-[#F5DEB3]" style={{ fontFamily: "serif" }}>
-            Gestionar INT de Usuarios
+            {tab === "campaign" ? "Gestionar INT de Campaña" : "Gestionar INT de Usuarios"}
           </h1>
           <p className="mt-2 text-sm text-[#D2B48C]">
-            Modifica el balance de INT de cualquier usuario ingresando un valor directamente.
+            {tab === "campaign"
+              ? "Modifica el balance de INT de campaña (single player) de cualquier usuario."
+              : "Modifica el balance de INT de cualquier usuario ingresando un valor directamente."}
           </p>
+
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={() => {
+                setTab("main");
+                setEditingUserId(null);
+                setEditValue("");
+              }}
+              className={`px-4 py-2 rounded border-2 font-semibold text-sm transition-colors ${
+                tab === "main"
+                  ? "bg-[#D4AF37] text-[#3E2723] border-[#654321]"
+                  : "bg-black/30 text-[#D2B48C] border-[#D4AF37]/40 hover:border-[#D4AF37]"
+              }`}
+            >
+              INT Multijugador
+            </button>
+            <button
+              onClick={() => {
+                setTab("campaign");
+                setEditingUserId(null);
+                setEditValue("");
+              }}
+              className={`px-4 py-2 rounded border-2 font-semibold text-sm transition-colors ${
+                tab === "campaign"
+                  ? "bg-[#D4AF37] text-[#3E2723] border-[#654321]"
+                  : "bg-black/30 text-[#D2B48C] border-[#D4AF37]/40 hover:border-[#D4AF37]"
+              }`}
+            >
+              INT Campaña
+            </button>
+          </div>
 
           <div className="mt-4">
             <input
@@ -106,7 +152,9 @@ export function AdminIntManager({
                 <tr className="border-b-2 border-[#D4AF37]/40">
                   <th className="py-3 px-4 text-[#D4AF37] font-semibold">Email</th>
                   <th className="py-3 px-4 text-[#D4AF37] font-semibold">User ID</th>
-                  <th className="py-3 px-4 text-[#D4AF37] font-semibold text-right">Balance INT</th>
+                  <th className="py-3 px-4 text-[#D4AF37] font-semibold text-right">
+                    {tab === "campaign" ? "Balance Campaña INT" : "Balance INT"}
+                  </th>
                   <th className="py-3 px-4 text-[#D4AF37] font-semibold text-center">Acciones</th>
                 </tr>
               </thead>
@@ -143,7 +191,7 @@ export function AdminIntManager({
                           />
                         ) : (
                           <span className="text-[#F5DEB3] font-semibold">
-                            {formatInt(user.balance)}
+                            {formatInt(tab === "campaign" ? user.campaignBalance ?? 0 : user.balance)}
                           </span>
                         )}
                       </td>

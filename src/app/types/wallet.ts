@@ -49,6 +49,7 @@ export interface WalletSummary {
   userId: string;
   email: string;
   balance: number;
+  campaignBalance?: number;
   transactions: WalletTransaction[];
   withdrawals: WithdrawalRequest[];
   updatedAt: number;

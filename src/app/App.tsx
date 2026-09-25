@@ -100,7 +100,7 @@ function App() {
   const [walletSummary, setWalletSummary] = useState<WalletSummary>(createEmptyWalletSummary("", ""));
   const [cashierNotice, setCashierNotice] = useState("");
   const [adminWithdrawals, setAdminWithdrawals] = useState<AdminWithdrawalItem[]>([]);
-  const [adminUsers, setAdminUsers] = useState<Array<{ userId: string; email: string; balance: number }>>([]);
+  const [adminUsers, setAdminUsers] = useState<Array<{ userId: string; email: string; balance: number; campaignBalance?: number }>>([]);
   const [authLoading, setAuthLoading] = useState(true);
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -127,6 +127,7 @@ function App() {
   const [showPotModal, setShowPotModal] = useState(false);
   const [showRebuyModal, setShowRebuyModal] = useState(false);
   const [marketplaceFromCampaign, setMarketplaceFromCampaign] = useState(false);
+  const [shopCreditVersion, setShopCreditVersion] = useState(0);
   const [timeLeftSeconds, setTimeLeftSeconds] = useState(20);
   const [isProcessingBet, setIsProcessingBet] = useState(false);
 
@@ -306,6 +307,33 @@ function App() {
     } else {
       alert(response.error ?? "No pudimos actualizar el balance");
     }
+  };
+
+  const handleUpdateCampaignBalance = async (userId: string, newBalance: number) => {
+    const response = await api.updateUserCampaignBalance(userId, newBalance);
+    if (response.data) {
+      await refreshAdminUsers();
+    } else {
+      alert(response.error ?? "No pudimos actualizar el balance de campaña");
+    }
+  };
+
+  const handleSyncCampaignBalance = async (balance: number) => {
+    if (!userData.id || !userData.email) return;
+    const response = await api.setCampaignBalance(userData.id, userData.email, balance);
+    if (response.data) {
+      applyWalletSummary(response.data);
+    }
+  };
+
+  const pullCampaignBalance = async (): Promise<number | null> => {
+    if (!userData.id || !userData.email) return null;
+    const response = await api.getWalletSummary(userData.id, userData.email);
+    if (response.data) {
+      applyWalletSummary(response.data);
+      return response.data.campaignBalance ?? null;
+    }
+    return null;
   };
 
   const recordWalletDebit = async (
@@ -896,6 +924,7 @@ function App() {
 
       sessionStorage.removeItem(CAMPAIGN_SHOP_PENDING_KEY);
       sessionStorage.setItem(CAMPAIGN_SHOP_DONE_KEY, String(pending.amount));
+      setShopCreditVersion((version) => version + 1);
     } finally {
       campaignTransferRef.current = false;
     }
@@ -1370,6 +1399,7 @@ function App() {
         onBack={handleBackToHome}
         onRefresh={refreshAdminUsers}
         onUpdateBalance={handleUpdateUserBalance}
+        onUpdateCampaignBalance={handleUpdateCampaignBalance}
       />
     );
   }
@@ -1412,6 +1442,9 @@ function App() {
       <Campaign
         onBack={handleBackToHome}
         userId={userData.id}
+        onPullCampaignBalance={pullCampaignBalance}
+        onSyncCampaignBalance={handleSyncCampaignBalance}
+        shopCreditVersion={shopCreditVersion}
         onOpenMarketplace={() => {
           setMarketplaceFromCampaign(true);
           setCurrentView("marketplace");

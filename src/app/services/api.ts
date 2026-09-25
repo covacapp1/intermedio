@@ -951,7 +951,7 @@ export const api = {
   },
 
   // Admin user INT management
-  getAdminUsers: async (): Promise<ApiResponse<{ users: Array<{ userId: string; email: string; balance: number }> }>> => {
+  getAdminUsers: async (): Promise<ApiResponse<{ users: Array<{ userId: string; email: string; balance: number; campaignBalance: number }> }>> => {
     return withLocalFallback(
       () => apiCallAuthenticated('/wallet/admin/users'),
       () => {
@@ -960,6 +960,7 @@ export const api = {
           userId: wallet.userId,
           email: wallet.email,
           balance: wallet.balance,
+          campaignBalance: wallet.campaignBalance ?? 0,
         }));
         return { data: { users } };
       }
@@ -979,6 +980,35 @@ export const api = {
         wallet.updatedAt = Date.now();
         walletStorage.save(wallet);
         return { data: { success: true, userId, balance: newBalance } };
+      }
+    );
+  },
+
+  updateUserCampaignBalance: async (userId: string, newBalance: number): Promise<ApiResponse<{ success: boolean; userId: string; campaignBalance: number }>> => {
+    return withLocalFallback(
+      () => apiCallAuthenticated(`/wallet/admin/users/${encodeURIComponent(userId)}/campaign-balance`, 'POST', { balance: newBalance }),
+      () => {
+        const wallets = walletStorage.read();
+        const wallet = wallets[userId];
+        if (!wallet) {
+          return { error: 'User not found' };
+        }
+        wallet.campaignBalance = newBalance;
+        wallet.updatedAt = Date.now();
+        walletStorage.save(wallet);
+        return { data: { success: true, userId, campaignBalance: newBalance } };
+      }
+    );
+  },
+
+  setCampaignBalance: async (userId: string, email: string, balance: number): Promise<ApiResponse<WalletSummary>> => {
+    return withLocalFallback(
+      () => apiCallAuthenticated('/wallet/campaign-balance', 'POST', { balance }),
+      () => {
+        const wallet = walletStorage.get(userId, email);
+        wallet.campaignBalance = balance;
+        wallet.updatedAt = Date.now();
+        return { data: walletStorage.save(wallet) };
       }
     );
   },
