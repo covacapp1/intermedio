@@ -9,13 +9,13 @@ const AI_NAMES = [
 
 export const DEFAULT_CAMPAIGN_LOCATIONS: CampaignLocation[] = [
   { id: "saloon1", name: "Salón del Polvo", description: "El primer salón. Fácil.", buyIn: 50, aiCount: 5, difficulty: "facil", unlocked: true, completed: false, x: 15, y: 75, icon: "🍺" },
-  { id: "pueblo2", name: "Pueblo Rojo", description: "Los locales juegan duro.", buyIn: 150, aiCount: 5, difficulty: "facil", unlocked: false, completed: false, x: 30, y: 60, icon: "🏘" },
-  { id: "mina3", name: "La Mina", description: "Oro y riesgo.", buyIn: 300, aiCount: 5, difficulty: "normal", unlocked: false, completed: false, x: 45, y: 70, icon: "⛏" },
-  { id: "rio4", name: "Puerto del Río", description: "Jugadores viajeros.", buyIn: 500, aiCount: 5, difficulty: "normal", unlocked: false, completed: false, x: 55, y: 45, icon: "⛵" },
-  { id: "ciudad5", name: "Ciudad Grande", description: "Todo cambia aquí.", buyIn: 800, aiCount: 5, difficulty: "dificil", unlocked: false, completed: false, x: 70, y: 55, icon: "🏙" },
-  { id: "fortin6", name: "El Fortín", description: "Solo los duros llegan.", buyIn: 1200, aiCount: 5, difficulty: "dificil", unlocked: false, completed: false, x: 80, y: 35, icon: "🏰" },
-  { id: "capital7", name: "La Capital", description: "Antes del jefe final.", buyIn: 2000, aiCount: 5, difficulty: "experto", unlocked: false, completed: false, x: 88, y: 20, icon: "👑" },
-  { id: "gobernador8", name: "Residencia del Gobernador", description: "El desafío final.", buyIn: 5000, aiCount: 5, difficulty: "experto", unlocked: false, completed: false, x: 92, y: 8, icon: "🏆" },
+  { id: "pueblo2", name: "Pueblo Rojo", description: "Los locales juegan duro.", buyIn: 50, aiCount: 5, difficulty: "facil", unlocked: false, completed: false, x: 30, y: 60, icon: "🏘" },
+  { id: "mina3", name: "La Mina", description: "Oro y riesgo.", buyIn: 50, aiCount: 5, difficulty: "normal", unlocked: false, completed: false, x: 45, y: 70, icon: "⛏" },
+  { id: "rio4", name: "Puerto del Río", description: "Jugadores viajeros.", buyIn: 50, aiCount: 5, difficulty: "normal", unlocked: false, completed: false, x: 55, y: 45, icon: "⛵" },
+  { id: "ciudad5", name: "Ciudad Grande", description: "Todo cambia aquí.", buyIn: 50, aiCount: 5, difficulty: "dificil", unlocked: false, completed: false, x: 70, y: 55, icon: "🏙" },
+  { id: "fortin6", name: "El Fortín", description: "Solo los duros llegan.", buyIn: 50, aiCount: 5, difficulty: "dificil", unlocked: false, completed: false, x: 80, y: 35, icon: "🏰" },
+  { id: "capital7", name: "La Capital", description: "Antes del jefe final.", buyIn: 50, aiCount: 5, difficulty: "experto", unlocked: false, completed: false, x: 88, y: 20, icon: "👑" },
+  { id: "gobernador8", name: "Residencia del Gobernador", description: "El desafío final.", buyIn: 50, aiCount: 5, difficulty: "experto", unlocked: false, completed: false, x: 92, y: 8, icon: "🏆" },
 ];
 
 export function createCampaignState(): CampaignState {
@@ -49,7 +49,7 @@ export function startCampaignGame(location: CampaignLocation): CampaignGameState
       name: randomName(usedNames),
       isAI: true,
       isDealer: false,
-      balance: location.buyIn * (3 + Math.floor(Math.random() * 3)),
+      balance: location.buyIn,
       bet: -1,
       cards: [],
       thirdCard: null,
@@ -138,7 +138,7 @@ export function calculateWinChance(cardA: { value: number }, cardB: { value: num
 function aiDecide(state: CampaignGameState, player: CampaignPlayer): number {
   if (player.cards.length < 2) return 0;
   const chance = calculateWinChance(player.cards[0], player.cards[1]);
-  const maxBet = Math.min(player.balance, Math.floor(state.pot / 2));
+  const maxBet = Math.min(player.balance, state.pot);
 
   if (chance <= 0.1) return 0;
   if (chance < 0.2) return Math.random() < 0.6 ? 0 : Math.max(1, Math.floor(maxBet * 0.15));
@@ -234,13 +234,10 @@ export function loadCampaignState(userId: string): CampaignState | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CampaignState;
     if (!parsed.locations || !Array.isArray(parsed.locations) || typeof parsed.balance !== "number") return null;
-    if (parsed.locations.length !== DEFAULT_CAMPAIGN_LOCATIONS.length) {
-      const defaults = DEFAULT_CAMPAIGN_LOCATIONS.map((d) => {
-        const saved = parsed.locations.find((l) => l.id === d.id);
-        return saved ? { ...d, unlocked: saved.unlocked, completed: saved.completed } : { ...d };
-      });
-      parsed.locations = defaults;
-    }
+    parsed.locations = DEFAULT_CAMPAIGN_LOCATIONS.map((d) => {
+      const saved = parsed.locations.find((l) => l.id === d.id);
+      return saved ? { ...d, unlocked: saved.unlocked, completed: saved.completed } : { ...d };
+    });
     return parsed;
   } catch {
     return null;
