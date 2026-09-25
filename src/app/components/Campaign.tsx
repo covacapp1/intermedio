@@ -3,6 +3,7 @@ import { CampaignMap } from "./CampaignMap";
 import { CampaignTown } from "./CampaignTown";
 import { CampaignTable } from "./CampaignTable";
 import { CampaignShop } from "./CampaignShop";
+import { CampaignRules } from "./CampaignRules";
 import { Confetti } from "./Confetti";
 import type { CampaignGameState, CampaignLocation, CampaignState } from "../types/campaign";
 import { formatMoney } from "../utils/deck";
@@ -73,6 +74,7 @@ export function Campaign({
   const shopReloadedRef = useRef(false);
   const completionClaimedRef = useRef(false);
   const [confettiOn, setConfettiOn] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
 
   useEffect(() => {
     if (userId) saveCampaignState(userId, campaignState);
@@ -344,7 +346,9 @@ export function Campaign({
         onBack={onBack}
         onSelectLocation={handleSelectLocation}
         onClaimIncome={handleClaimIncome}
+        onShowRules={() => setRulesOpen(true)}
       />
+      {rulesOpen ? <CampaignRules onClose={() => setRulesOpen(false)} /> : null}
       {error ? <ErrorBanner message={error} /> : null}
       {success ? <SuccessBanner message={success} /> : null}
       {confettiOn ? <Confetti /> : null}

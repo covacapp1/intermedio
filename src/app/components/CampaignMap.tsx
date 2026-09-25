@@ -1,4 +1,4 @@
-import { ArrowLeft, Lock, CheckCircle, Coins, Wallet } from "lucide-react";
+import { ArrowLeft, Lock, CheckCircle, Coins, Wallet, ScrollText } from "lucide-react";
 import type { CampaignState, CampaignLocation } from "../types/campaign";
 import { formatMoney } from "../utils/deck";
 import { getTownDef, townCompleted } from "../services/campaignEngine";
@@ -10,6 +10,7 @@ interface CampaignMapProps {
   onBack: () => void;
   onSelectLocation: (location: CampaignLocation) => void;
   onClaimIncome: () => void;
+  onShowRules: () => void;
 }
 
 const DIFFICULTY_COLORS: Record<string, string> = {
@@ -33,6 +34,7 @@ export function CampaignMap({
   onBack,
   onSelectLocation,
   onClaimIncome,
+  onShowRules,
 }: CampaignMapProps) {
   const dailyIncome = campaignState.ownedProperties.reduce((sum, key) => {
     const sep = key.indexOf(":");
@@ -63,6 +65,13 @@ export function CampaignMap({
                 Cobrar {formatMoney(pendingIncome)}
               </button>
             ) : null}
+            <button
+              onClick={onShowRules}
+              className="flex items-center gap-1.5 bg-[#3E2723] border-2 border-[#D4AF37] rounded-lg px-3 py-1.5 text-[#F5DEB3] font-bold text-xs hover:bg-[#4E3723] transition-colors"
+            >
+              <ScrollText className="w-3.5 h-3.5" />
+              Reglas
+            </button>
             <div className="flex items-center gap-2 bg-[#3E2723] border-2 border-[#D4AF37] rounded-lg px-3 py-1.5">
               <Coins className="w-4 h-4 text-[#D4AF37]" />
               <span className="text-[#F5DEB3] font-bold text-sm">{formatMoney(campaignState.balance)}</span>
