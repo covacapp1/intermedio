@@ -75,7 +75,6 @@ export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogo
             </p>
           </div>
           {isAdmin ? <MenuEntry label="Cajero" onClick={() => onNavigate("cashier")} /> : null}
-          <MenuEntry label="Campaña" onClick={() => onNavigate("campaign")} />
           <MenuEntry label="Marketplace" onClick={() => onNavigate("marketplace")} />
           <MenuEntry label="Anuncios" onClick={() => onNavigate("ads")} />
           {isAdmin ? <MenuEntry label="Admin" onClick={() => onNavigate("admin")} /> : null}
@@ -113,6 +112,7 @@ export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogo
           <WesternButton onClick={() => onNavigate("profile")}>PERFIL</WesternButton>
           <WesternButton onClick={() => onNavigate("tables")}>LOBBY</WesternButton>
           <WesternButton onClick={() => onNavigate("createTable")}>CREAR MESA</WesternButton>
+          <WesternButton onClick={() => onNavigate("campaign")}>CAMPAÑA</WesternButton>
           {!isStandalone && (
             <button
               onClick={handleInstall}
