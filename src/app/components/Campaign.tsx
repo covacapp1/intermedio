@@ -69,6 +69,7 @@ export function Campaign({
   const finalizedRef = useRef(false);
   const shopPromptedRef = useRef(false);
   const prevPushedJsonRef = useRef(JSON.stringify(campaignState));
+  const stateRef = useRef(campaignState);
   const completionClaimedRef = useRef(false);
   const [confettiOn, setConfettiOn] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -78,6 +79,7 @@ export function Campaign({
   }, [campaignState, userId]);
 
   useEffect(() => {
+    stateRef.current = campaignState;
     const json = JSON.stringify(campaignState);
     if (json === prevPushedJsonRef.current) return;
     prevPushedJsonRef.current = json;
@@ -89,10 +91,16 @@ export function Campaign({
     let cancelled = false;
     void onPullCampaign().then((res) => {
       if (cancelled || !res) return;
-      setCampaignState((local) => {
-        const merged = mergeCampaignStates(local, res.state, res.balance);
-        return JSON.stringify(merged) === JSON.stringify(local) ? local : merged;
-      });
+      const local = stateRef.current;
+      const merged = mergeCampaignStates(local, res.state, res.balance);
+      const localJson = JSON.stringify(local);
+      const mergedJson = JSON.stringify(merged);
+      if (mergedJson !== localJson) {
+        setCampaignState(merged);
+      } else if (!res.state) {
+        prevPushedJsonRef.current = localJson;
+        onSyncCampaignState(local);
+      }
     });
     return () => {
       cancelled = true;
