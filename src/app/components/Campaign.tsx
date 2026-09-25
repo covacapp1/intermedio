@@ -31,7 +31,6 @@ import {
 interface CampaignProps {
   onBack: () => void;
   userId: string;
-  onOpenMarketplace: () => void;
   onBuyCampaignPack: (amount: number) => Promise<string | null>;
   onPullCampaignBalance: () => Promise<number | null>;
   onSyncCampaignBalance: (balance: number) => void;
@@ -49,7 +48,6 @@ export const CAMPAIGN_SHOP_DONE_KEY = "campaignShopDone";
 export function Campaign({
   onBack,
   userId,
-  onOpenMarketplace,
   onBuyCampaignPack,
   onPullCampaignBalance,
   onSyncCampaignBalance,
@@ -328,10 +326,6 @@ export function Campaign({
             balance={campaignState.balance}
             onClose={() => setShopOpen(false)}
             onBuyPack={onBuyCampaignPack}
-            onOpenMarketplace={() => {
-              setShopOpen(false);
-              onOpenMarketplace();
-            }}
           />
         ) : null}
       </div>
@@ -359,10 +353,6 @@ export function Campaign({
           balance={campaignState.balance}
           onClose={() => setShopOpen(false)}
           onBuyPack={onBuyCampaignPack}
-          onOpenMarketplace={() => {
-            setShopOpen(false);
-            onOpenMarketplace();
-          }}
         />
       ) : null}
     </div>

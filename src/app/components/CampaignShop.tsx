@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Coins, Loader2, Store } from "lucide-react";
+import { X, Coins, Loader2 } from "lucide-react";
 import { SHOP_PACKS } from "../services/campaignEngine";
 import { formatMoney } from "../utils/deck";
 import { formatArs } from "../utils/economy";
@@ -8,10 +8,9 @@ interface CampaignShopProps {
   balance: number;
   onClose: () => void;
   onBuyPack: (amount: number) => Promise<string | null>;
-  onOpenMarketplace: () => void;
 }
 
-export function CampaignShop({ balance, onClose, onBuyPack, onOpenMarketplace }: CampaignShopProps) {
+export function CampaignShop({ balance, onClose, onBuyPack }: CampaignShopProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,16 +67,6 @@ export function CampaignShop({ balance, onClose, onBuyPack, onOpenMarketplace }:
               </span>
             </button>
           ))}
-
-          <button
-            onClick={onOpenMarketplace}
-            disabled={loading}
-            className="w-full flex items-center justify-center gap-2 bg-gradient-to-b from-[#A0792A] to-[#8B6914] border-2 border-[#654321] rounded-lg px-4 py-3 text-[#F5DEB3] font-bold hover:from-[#B8941E] hover:to-[#A0792A] transition-all active:scale-[0.98] disabled:opacity-60"
-          >
-            <Store className="w-5 h-5" />
-            MARKETPLACE
-            <span className="text-xs font-normal opacity-80">(más paquetes)</span>
-          </button>
         </div>
 
         {error ? <p className="text-red-400 text-xs text-center mt-3">{error}</p> : null}

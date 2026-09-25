@@ -1455,10 +1455,6 @@ function App() {
         onClaimCompletionReward={handleClaimCompletionReward}
         completionRewardClaimed={walletSummary.campaignCompletionRewarded ?? false}
         shopCreditVersion={shopCreditVersion}
-        onOpenMarketplace={() => {
-          setMarketplaceFromCampaign(true);
-          setCurrentView("marketplace");
-        }}
         onBuyCampaignPack={handleCampaignDeposit}
       />
     );
