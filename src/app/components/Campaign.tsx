@@ -20,6 +20,7 @@ import {
   isGameOver,
   loadCampaignState,
   MATCH_BUY_IN,
+  mergeCampaignStates,
   playerAction,
   saveCampaignState,
   skipUnlock,
@@ -32,8 +33,8 @@ interface CampaignProps {
   onBack: () => void;
   userId: string;
   onBuyCampaignPack: (amount: number) => Promise<string | null>;
-  onPullCampaignBalance: () => Promise<number | null>;
-  onSyncCampaignBalance: (balance: number) => void;
+  onPullCampaign: () => Promise<{ balance: number; state: CampaignState | null } | null>;
+  onSyncCampaignState: (state: CampaignState) => void;
   onClaimCompletionReward: () => Promise<"claimed" | "already" | "error">;
   completionRewardClaimed: boolean;
   shopCreditVersion: number;
@@ -49,8 +50,8 @@ export function Campaign({
   onBack,
   userId,
   onBuyCampaignPack,
-  onPullCampaignBalance,
-  onSyncCampaignBalance,
+  onPullCampaign,
+  onSyncCampaignState,
   onClaimCompletionReward,
   completionRewardClaimed,
   shopCreditVersion,
@@ -67,9 +68,7 @@ export function Campaign({
   const [shopOpen, setShopOpen] = useState(false);
   const finalizedRef = useRef(false);
   const shopPromptedRef = useRef(false);
-  const lastPushedRef = useRef<number | null>(null);
-  const prevBalanceRef = useRef(campaignState.balance);
-  const shopReloadedRef = useRef(false);
+  const prevPushedJsonRef = useRef(JSON.stringify(campaignState));
   const completionClaimedRef = useRef(false);
   const [confettiOn, setConfettiOn] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -79,21 +78,21 @@ export function Campaign({
   }, [campaignState, userId]);
 
   useEffect(() => {
-    if (campaignState.balance === prevBalanceRef.current) return;
-    prevBalanceRef.current = campaignState.balance;
-    lastPushedRef.current = campaignState.balance;
-    onSyncCampaignBalance(campaignState.balance);
-  }, [campaignState.balance, onSyncCampaignBalance]);
+    const json = JSON.stringify(campaignState);
+    if (json === prevPushedJsonRef.current) return;
+    prevPushedJsonRef.current = json;
+    onSyncCampaignState(campaignState);
+  }, [campaignState, onSyncCampaignState]);
 
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
-    void onPullCampaignBalance().then((serverBalance) => {
-      if (cancelled || serverBalance === null) return;
-      if (lastPushedRef.current !== null || shopReloadedRef.current) return;
-      setCampaignState((prev) =>
-        prev.balance === serverBalance ? prev : { ...prev, balance: serverBalance }
-      );
+    void onPullCampaign().then((res) => {
+      if (cancelled || !res) return;
+      setCampaignState((local) => {
+        const merged = mergeCampaignStates(local, res.state, res.balance);
+        return JSON.stringify(merged) === JSON.stringify(local) ? local : merged;
+      });
     });
     return () => {
       cancelled = true;
@@ -118,7 +117,6 @@ export function Campaign({
     if (!shopCreditVersion || !userId) return;
     const fresh = loadCampaignState(userId);
     if (fresh) {
-      shopReloadedRef.current = true;
       setCampaignState(fresh);
     }
     const done = sessionStorage.getItem(CAMPAIGN_SHOP_DONE_KEY);

@@ -51,6 +51,7 @@ export interface WalletSummary {
   balance: number;
   campaignBalance?: number;
   campaignCompletionRewarded?: boolean;
+  campaignState?: Record<string, unknown>;
   transactions: WalletTransaction[];
   withdrawals: WithdrawalRequest[];
   updatedAt: number;

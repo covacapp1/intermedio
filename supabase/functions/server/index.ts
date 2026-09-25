@@ -88,6 +88,7 @@ interface WalletSummary {
   balance: number;
   campaignBalance?: number;
   campaignCompletionRewarded?: boolean;
+  campaignState?: Record<string, unknown>;
   transactions: WalletTransaction[];
   withdrawals: WithdrawalRequest[];
   updatedAt: number;
@@ -1435,6 +1436,9 @@ app.post("/server/wallet/admin/users/:userId/campaign-balance", async (c) => {
 
     const wallet = await getWallet(targetUserId, "");
     wallet.campaignBalance = Math.floor(newBalance);
+    if (wallet.campaignState && typeof wallet.campaignState === "object") {
+      wallet.campaignState.balance = wallet.campaignBalance;
+    }
     wallet.updatedAt = Date.now();
     await saveWallet(wallet);
 
@@ -1461,6 +1465,9 @@ app.post("/server/wallet/campaign-balance", async (c) => {
 
     const wallet = await getWallet(auth.user.id, auth.user.email);
     wallet.campaignBalance = Math.floor(newBalance);
+    if (wallet.campaignState && typeof wallet.campaignState === "object") {
+      wallet.campaignState.balance = wallet.campaignBalance;
+    }
     wallet.updatedAt = Date.now();
     const saved = await saveWallet(wallet);
 
@@ -1504,6 +1511,37 @@ app.post("/server/wallet/campaign-completion-reward", async (c) => {
   } catch (error) {
     console.log("Error claiming campaign completion reward:", error);
     return c.json({ error: "Failed to claim campaign reward" }, 500);
+  }
+});
+
+app.post("/server/wallet/campaign-state", async (c) => {
+  try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
+    const body = await c.req.json();
+    const { state } = body;
+
+    if (
+      !state ||
+      typeof state !== "object" ||
+      typeof (state as Record<string, unknown>).balance !== "number"
+    ) {
+      return c.json({ error: "Invalid campaign state" }, 400);
+    }
+
+    const wallet = await getWallet(auth.user.id, auth.user.email);
+    wallet.campaignState = state;
+    wallet.campaignBalance = Math.floor((state as Record<string, unknown>).balance as number);
+    wallet.updatedAt = Date.now();
+    const saved = await saveWallet(wallet);
+
+    return c.json(saved);
+  } catch (error) {
+    console.log("Error saving campaign state:", error);
+    return c.json({ error: "Failed to save campaign state" }, 500);
   }
 });
 

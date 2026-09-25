@@ -994,6 +994,9 @@ export const api = {
           return { error: 'User not found' };
         }
         wallet.campaignBalance = newBalance;
+        if (wallet.campaignState && typeof wallet.campaignState === 'object') {
+          wallet.campaignState.balance = newBalance;
+        }
         wallet.updatedAt = Date.now();
         walletStorage.save(wallet);
         return { data: { success: true, userId, campaignBalance: newBalance } };
@@ -1007,6 +1010,26 @@ export const api = {
       () => {
         const wallet = walletStorage.get(userId, email);
         wallet.campaignBalance = balance;
+        if (wallet.campaignState && typeof wallet.campaignState === 'object') {
+          wallet.campaignState.balance = balance;
+        }
+        wallet.updatedAt = Date.now();
+        return { data: walletStorage.save(wallet) };
+      }
+    );
+  },
+
+  setCampaignState: async (
+    userId: string,
+    email: string,
+    state: Record<string, unknown>
+  ): Promise<ApiResponse<WalletSummary>> => {
+    return withLocalFallback(
+      () => apiCallAuthenticated('/wallet/campaign-state', 'POST', { state }),
+      () => {
+        const wallet = walletStorage.get(userId, email);
+        wallet.campaignState = state;
+        wallet.campaignBalance = Math.floor(Number(state.balance) || 0);
         wallet.updatedAt = Date.now();
         return { data: walletStorage.save(wallet) };
       }

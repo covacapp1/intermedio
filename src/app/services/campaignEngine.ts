@@ -205,6 +205,42 @@ export function isCampaignCompleted(state: CampaignState): boolean {
   return TOWN_DEFS.every((town) => townCompleted(state, town.townId));
 }
 
+export function mergeCampaignStates(
+  local: CampaignState,
+  server: CampaignState | null,
+  serverBalance: number
+): CampaignState {
+  const balance = Math.max(local.balance, serverBalance, server?.balance ?? 0);
+  if (!server) {
+    return { ...local, balance };
+  }
+
+  const union = (a: string[], b: string[]): string[] => Array.from(new Set([...a, ...(b ?? [])]));
+  const serverLocations = server.locations ?? [];
+
+  return {
+    ...local,
+    balance,
+    locations: local.locations.map((loc, idx) => {
+      const other = serverLocations[idx];
+      if (!other) return loc;
+      return {
+        ...loc,
+        unlocked: loc.unlocked || other.unlocked,
+        completed: loc.completed || other.completed,
+      };
+    }),
+    ownedProperties: union(local.ownedProperties, server.ownedProperties),
+    completedBuildings: union(local.completedBuildings, server.completedBuildings),
+    totalWon: Math.max(local.totalWon, server.totalWon ?? 0),
+    totalLost: Math.max(local.totalLost, server.totalLost ?? 0),
+    gamesPlayed: Math.max(local.gamesPlayed, server.gamesPlayed ?? 0),
+    gamesWon: Math.max(local.gamesWon, server.gamesWon ?? 0),
+    lastIncomeClaimAt: Math.max(local.lastIncomeClaimAt, server.lastIncomeClaimAt ?? 0),
+    currentLocationId: local.currentLocationId ?? server.currentLocationId ?? null,
+  };
+}
+
 export function unlockNextIfConquered(state: CampaignState): CampaignState {
   let next = state;
   next.locations.forEach((loc, idx) => {

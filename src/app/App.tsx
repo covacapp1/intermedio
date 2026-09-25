@@ -20,6 +20,7 @@ import { Terms } from "./components/Terms";
 import { Campaign, CAMPAIGN_SHOP_DONE_KEY } from "./components/Campaign";
 import { createCampaignState, loadCampaignState, saveCampaignState } from "./services/campaignEngine";
 import { type GameState } from "./types/game";
+import type { CampaignState } from "./types/campaign";
 import { formatMoney } from "./utils/deck";
 import { api } from "./services/api";
 import { realtimeGame, type GameTable as RealtimeGameTable, type TableInfo } from "./services/realtimeGame";
@@ -318,20 +319,23 @@ function App() {
     }
   };
 
-  const handleSyncCampaignBalance = async (balance: number) => {
+  const handleSyncCampaignState = async (state: CampaignState) => {
     if (!userData.id || !userData.email) return;
-    const response = await api.setCampaignBalance(userData.id, userData.email, balance);
+    const response = await api.setCampaignState(userData.id, userData.email, state);
     if (response.data) {
       applyWalletSummary(response.data);
     }
   };
 
-  const pullCampaignBalance = async (): Promise<number | null> => {
+  const pullCampaign = async (): Promise<{ balance: number; state: CampaignState | null } | null> => {
     if (!userData.id || !userData.email) return null;
     const response = await api.getWalletSummary(userData.id, userData.email);
     if (response.data) {
       applyWalletSummary(response.data);
-      return response.data.campaignBalance ?? null;
+      return {
+        balance: response.data.campaignBalance ?? 0,
+        state: (response.data.campaignState as CampaignState | undefined) ?? null,
+      };
     }
     return null;
   };
@@ -1450,8 +1454,8 @@ function App() {
       <Campaign
         onBack={handleBackToHome}
         userId={userData.id}
-        onPullCampaignBalance={pullCampaignBalance}
-        onSyncCampaignBalance={handleSyncCampaignBalance}
+        onPullCampaign={pullCampaign}
+        onSyncCampaignState={handleSyncCampaignState}
         onClaimCompletionReward={handleClaimCompletionReward}
         completionRewardClaimed={walletSummary.campaignCompletionRewarded ?? false}
         shopCreditVersion={shopCreditVersion}
