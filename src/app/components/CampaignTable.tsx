@@ -17,19 +17,30 @@ interface CampaignTableProps {
   didWin: boolean;
 }
 
-function MiniCard({ card, small }: { card?: { suit: string; value: number }; small?: boolean }) {
-  if (!card) return null;
+function MiniCard({ card, small, faceDown }: { card?: { suit: string; value: number }; small?: boolean; faceDown?: boolean }) {
+  if (!card && !faceDown) return null;
+  const size = small ? "w-7 h-10 sm:w-8 sm:h-11" : "w-9 h-13 sm:w-11 sm:h-15";
+
+  if (faceDown) {
+    return (
+      <div
+        className={`${size} rounded border border-zinc-300 bg-gradient-to-br from-[#8B4513] to-[#4a2c14] flex items-center justify-center shadow-md`}
+      >
+        <div className="w-2/3 h-3/4 border-2 border-[#D4AF37]/70 rounded-sm" />
+      </div>
+    );
+  }
+
   const suitColors: Record<string, string> = { oros: "#FFD700", copas: "#DC143C", espadas: "#1E3A8A", bastos: "#065F46" };
   const suitSymbols: Record<string, string> = { oros: "●", copas: "♥", espadas: "♠", bastos: "♣" };
-  const color = suitColors[card.suit] || "#000";
-  const size = small ? "w-7 h-10 sm:w-8 sm:h-11" : "w-9 h-13 sm:w-11 sm:h-15";
+  const color = suitColors[card!.suit] || "#000";
 
   return (
     <div
       className={`${size} rounded border border-zinc-300 bg-white flex flex-col items-center justify-center shadow-md`}
     >
-      <span className="font-bold text-xs sm:text-sm" style={{ color }}>{card.value}</span>
-      <span className="text-sm leading-none" style={{ color }}>{suitSymbols[card.suit]}</span>
+      <span className="font-bold text-xs sm:text-sm" style={{ color }}>{card!.value}</span>
+      <span className="text-sm leading-none" style={{ color }}>{suitSymbols[card!.suit]}</span>
     </div>
   );
 }
@@ -53,12 +64,12 @@ function AIPanel({ player, isTurn }: { player: CampaignPlayer; isTurn: boolean }
       <p className="text-[#D2B48C] text-[8px] sm:text-[9px]">{formatMoney(player.balance)}</p>
       <div className="flex justify-center gap-0.5 mt-1">
         {player.cards.map((c, i) => (
-          <MiniCard key={i} card={c} small />
+          <MiniCard key={i} card={c} small faceDown={player.result.startsWith("Pierde")} />
         ))}
       </div>
       {player.thirdCard && (
         <div className="flex justify-center mt-1">
-          <MiniCard card={player.thirdCard} small />
+          <MiniCard card={player.thirdCard} small faceDown={player.result.startsWith("Pierde")} />
         </div>
       )}
       {player.result && (
