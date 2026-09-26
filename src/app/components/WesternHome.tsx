@@ -90,10 +90,10 @@ export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogo
         </div>
       )}
 
-      <div className="relative z-10 max-w-2xl mx-auto pt-16 sm:pt-20 flex-1 w-full">
-        <div className="text-center mb-12 sm:mb-16">
+      <div className="relative z-10 max-w-2xl mx-auto pt-12 sm:pt-14 flex-1 w-full flex flex-col justify-center">
+        <div className="text-center mb-6 sm:mb-8">
           <h1
-            className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-[#F5DEB3] drop-shadow-[0_6px_12px_rgba(0,0,0,0.9)] mb-4"
+            className="text-5xl sm:text-6xl md:text-7xl font-bold text-[#F5DEB3] drop-shadow-[0_6px_12px_rgba(0,0,0,0.9)] mb-2 sm:mb-3"
             style={{
               fontFamily: "serif",
               textShadow: "4px 4px 0 #654321, -2px -2px 0 #654321, 2px -2px 0 #654321, -2px 2px 0 #654321",
@@ -108,7 +108,7 @@ export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogo
           </div>
         </div>
 
-        <div className="space-y-5 sm:space-y-6">
+        <div className="space-y-3 sm:space-y-4">
           <WesternButton onClick={() => onNavigate("profile")}>PERFIL</WesternButton>
           <WesternButton onClick={() => onNavigate("tables")}>LOBBY</WesternButton>
           <WesternButton onClick={() => onNavigate("createTable")}>CREAR MESA</WesternButton>
@@ -116,7 +116,7 @@ export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogo
           {!isStandalone && (
             <button
               onClick={handleInstall}
-              className="w-full py-3 sm:py-4 bg-gradient-to-b from-[#2d9a68] to-[#1f6b47] text-white font-bold text-base sm:text-lg border-4 border-[#654321] rounded-lg shadow-[0_8px_20px_rgba(0,0,0,0.6)] hover:from-[#38b577] hover:to-[#2d9a68] transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+              className="w-full py-2.5 sm:py-3 bg-gradient-to-b from-[#2d9a68] to-[#1f6b47] text-white font-bold text-base border-4 border-[#654321] rounded-lg shadow-[0_8px_20px_rgba(0,0,0,0.6)] hover:from-[#38b577] hover:to-[#2d9a68] transition-all transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
             >
               <Download className="w-5 h-5" />
               Instalar App
@@ -173,7 +173,7 @@ export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogo
       </div>
 
       <footer
-        className="relative z-10 mt-10 sm:mt-14 pb-6 text-center text-xs sm:text-sm text-[#F5DEB3]/85"
+        className="relative z-10 mt-6 sm:mt-8 pb-4 text-center text-xs sm:text-sm text-[#F5DEB3]/85 shrink-0"
         style={{ fontFamily: "serif" }}
       >
         <p>
@@ -218,7 +218,7 @@ function WesternButton({ onClick, children }: { onClick: () => void; children: R
   return (
     <button
       onClick={onClick}
-      className="w-full py-4 sm:py-5 bg-gradient-to-b from-[#D4AF37] to-[#B8941E] text-[#3E2723] font-bold text-xl sm:text-2xl border-4 border-[#654321] rounded-lg shadow-[0_8px_20px_rgba(0,0,0,0.6)] hover:from-[#FFD700] hover:to-[#D4AF37] transition-all transform hover:scale-105 active:scale-95 relative overflow-hidden group"
+      className="w-full py-3 sm:py-4 bg-gradient-to-b from-[#D4AF37] to-[#B8941E] text-[#3E2723] font-bold text-lg sm:text-xl border-4 border-[#654321] rounded-lg shadow-[0_8px_20px_rgba(0,0,0,0.6)] hover:from-[#FFD700] hover:to-[#D4AF37] transition-all transform hover:scale-105 active:scale-95 relative overflow-hidden group"
       style={{ fontFamily: "serif" }}
     >
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 group-hover:translate-x-full transition-transform duration-700" />

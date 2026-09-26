@@ -34,17 +34,17 @@ export function TablesList({ tables, onJoinTable, onBack }: TablesListProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#8B4513] via-[#A0522D] to-[#654321] p-4">
-      <div className="mx-auto max-w-5xl pt-8">
+      <div className="mx-auto max-w-5xl pt-4">
         <button
           onClick={onBack}
-          className="mb-6 rounded border-2 border-[#D4AF37] bg-[#654321] px-4 py-2 text-[#F5DEB3] transition-colors hover:bg-[#7d5a2e]"
+          className="mb-4 rounded border-2 border-[#D4AF37] bg-[#654321] px-4 py-1.5 text-sm text-[#F5DEB3] transition-colors hover:bg-[#7d5a2e] sm:text-base"
         >
           Volver al Saloon
         </button>
 
-        <div className="mb-8 text-center">
+        <div className="mb-4 text-center">
           <h1
-            className="mb-4 text-5xl font-bold text-[#F5DEB3] drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] md:text-6xl"
+            className="mb-1 text-4xl font-bold text-[#F5DEB3] drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] md:text-5xl"
             style={{
               fontFamily: "serif",
               textShadow: "3px 3px 0 #654321",
@@ -52,11 +52,11 @@ export function TablesList({ tables, onJoinTable, onBack }: TablesListProps) {
           >
             LOBBY
           </h1>
-          <p className="text-lg text-[#D2B48C]">Busca por codigo o entra a una mesa disponible</p>
+          <p className="text-sm text-[#D2B48C] sm:text-base">Busca por codigo o entra a una mesa disponible</p>
         </div>
 
         <div
-          className="mb-6 rounded-lg border-4 border-[#654321] p-4 shadow-[0_8px_20px_rgba(0,0,0,0.55)]"
+          className="mb-4 rounded-lg border-4 border-[#654321] p-3 shadow-[0_8px_20px_rgba(0,0,0,0.55)]"
           style={{
             background: "linear-gradient(135deg, #654321 0%, #8B4513 50%, #654321 100%)",
           }}
@@ -91,14 +91,14 @@ export function TablesList({ tables, onJoinTable, onBack }: TablesListProps) {
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {availableTables.map((table) => (
               <TableCard key={table.id} table={table} onJoin={() => onJoinTable(table.id)} />
             ))}
           </div>
         )}
 
-        <div className="mt-8 text-center">
+        <div className="mt-4 text-center">
           <p className="text-sm text-[#D2B48C]">
             {availableTables.length} {availableTables.length === 1 ? "mesa visible en lobby" : "mesas visibles en lobby"}
           </p>
@@ -115,7 +115,7 @@ function TableCard({ table, onJoin }: { table: TableInfo; onJoin: () => void }) 
 
   return (
     <div
-      className="group relative rounded-lg border-4 border-[#654321] p-5 shadow-[0_8px_20px_rgba(0,0,0,0.6)] transition-all hover:border-[#D4AF37] hover:shadow-[0_10px_25px_rgba(0,0,0,0.8)]"
+      className="group relative rounded-lg border-4 border-[#654321] p-4 shadow-[0_8px_20px_rgba(0,0,0,0.6)] transition-all hover:border-[#D4AF37] hover:shadow-[0_10px_25px_rgba(0,0,0,0.8)]"
       style={{
         background: "linear-gradient(135deg, #654321 0%, #8B4513 50%, #654321 100%)",
       }}
@@ -125,19 +125,19 @@ function TableCard({ table, onJoin }: { table: TableInfo; onJoin: () => void }) 
       <div className="absolute -bottom-0.5 -left-0.5 h-6 w-6 border-b-2 border-l-2 border-[#D4AF37] opacity-0 transition-opacity group-hover:opacity-100"></div>
       <div className="absolute -bottom-0.5 -right-0.5 h-6 w-6 border-b-2 border-r-2 border-[#D4AF37] opacity-0 transition-opacity group-hover:opacity-100"></div>
 
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex-1">
-          <div className="mb-3 flex items-center gap-3">
-            <div className="text-3xl">+</div>
+          <div className="mb-2 flex items-center gap-3">
+            <div className="text-2xl">+</div>
             <div>
-              <h3 className="text-xl font-bold text-[#F5DEB3]" style={{ fontFamily: "serif" }}>
+              <h3 className="text-lg font-bold text-[#F5DEB3]" style={{ fontFamily: "serif" }}>
                 {table.name}
               </h3>
               <p className="font-mono text-xs text-[#D2B48C]">Codigo: {table.code}</p>
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-2">
             <div className="flex items-center gap-2 rounded border border-[#D4AF37]/30 bg-black/20 px-3 py-1.5">
               <DollarSign className="h-4 w-4 text-[#D4AF37]" />
               <div>
