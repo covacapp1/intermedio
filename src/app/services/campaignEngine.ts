@@ -9,6 +9,7 @@ const AI_NAMES = [
 
 export const MATCH_BUY_IN = 50;
 export const WIN_PRIZE = 100;
+export const ROUND_ANTE = 2;
 export const SKIP_UNLOCK_PRICE = 800;
 export const SHOP_PACKS = [500, 1000, 2000];
 export const CAMPAIGN_COMPLETION_REWARD = 5000;
@@ -353,7 +354,7 @@ export function startCampaignGame(location: CampaignLocation): CampaignGameState
   const state: CampaignGameState = {
     locationId: location.id,
     buyIn: location.buyIn,
-    pot: location.buyIn * 10,
+    pot: location.buyIn * 10 + ROUND_ANTE * (location.aiCount + 1),
     round: 1,
     roundResolved: false,
     currentTurn: 0,
@@ -480,9 +481,15 @@ export function advanceRound(state: CampaignGameState): CampaignGameState {
   if (!s.roundResolved || isGameOver(s)) return s;
 
   s.round += 1;
+  for (const p of s.players) {
+    if (p.balance <= 0) continue;
+    const ante = Math.min(ROUND_ANTE, p.balance);
+    p.balance -= ante;
+    s.pot += ante;
+  }
   dealRound(s);
   s.currentTurn = findFirstActiveTurn(s);
-  s.message = `Ronda ${s.round} — ¡Empezá!`;
+  s.message = `Ronda ${s.round} — ¡Empezá! (${ROUND_ANTE} INT por jugador al pozo)`;
   return s;
 }
 

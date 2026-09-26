@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ArrowLeft, Coins, User } from "lucide-react";
 import type { CampaignGameState, CampaignPlayer } from "../types/campaign";
 import { formatMoney } from "../utils/deck";
-import { calculateWinChance, WIN_PRIZE } from "../services/campaignEngine";
+import { calculateWinChance, WIN_PRIZE, ROUND_ANTE } from "../services/campaignEngine";
 
 interface CampaignTableProps {
   gameState: CampaignGameState;
@@ -141,6 +141,7 @@ export function CampaignTable({
               <Coins className="w-3 h-3 text-[#D4AF37]" />
               <span className="text-[#F5DEB3] font-bold">{formatMoney(gameState.pot)}</span>
             </div>
+            <span className="text-[#D2B48C] hidden sm:inline">Ante {ROUND_ANTE} INT/jugador por ronda</span>
           </div>
         </div>
 

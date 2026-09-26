@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { X, Swords, Map, Home, Coins, Trophy } from "lucide-react";
-import { MATCH_BUY_IN, WIN_PRIZE, SKIP_UNLOCK_PRICE, CAMPAIGN_COMPLETION_REWARD, TOWN_DEFS } from "../services/campaignEngine";
+import { MATCH_BUY_IN, WIN_PRIZE, ROUND_ANTE, SKIP_UNLOCK_PRICE, CAMPAIGN_COMPLETION_REWARD, TOWN_DEFS } from "../services/campaignEngine";
 
 interface CampaignRulesProps {
   onClose: () => void;
@@ -58,6 +58,13 @@ export function CampaignRules({ onClose }: CampaignRulesProps) {
             </p>
             <p>Se reparten 40 cartas españolas (del 1 al 7, 10, 11 y 12):</p>
             <ul className="list-disc pl-5 space-y-1">
+              <li>
+                <strong>Cada ronda</strong>, todos los de la mesa (vos y las{" "}
+                <strong className="text-[#F5DEB3]">5 IA</strong>) pagan{" "}
+                <strong className="text-[#F5DEB3]">{ROUND_ANTE} INT</strong> que van directo al{" "}
+                <strong className="text-[#F5DEB3]">pozo</strong>. La banca empieza con un pozo de 500 INT y se
+                rellena con esas fichas de ronda.
+              </li>
               <li>A cada jugador le salen <strong>2 cartas boca arriba</strong>.</li>
               <li>
                 <strong>Apostás</strong>: se saca una 3ra carta. <strong>Si queda exactamente entre las dos primeras, ganás</strong> y la banca te paga; si no, perdés lo apostado.{" "}
