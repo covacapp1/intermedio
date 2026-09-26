@@ -64,12 +64,12 @@ function AIPanel({ player, isTurn }: { player: CampaignPlayer; isTurn: boolean }
       <p className="text-[#D2B48C] text-[8px] sm:text-[9px]">{formatMoney(player.balance)}</p>
       <div className="flex justify-center gap-0.5 mt-1">
         {player.cards.map((c, i) => (
-          <MiniCard key={i} card={c} small faceDown={player.result.startsWith("Pierde")} />
+          <MiniCard key={i} card={c} small faceDown={player.balance <= 0} />
         ))}
       </div>
       {player.thirdCard && (
         <div className="flex justify-center mt-1">
-          <MiniCard card={player.thirdCard} small faceDown={player.result.startsWith("Pierde")} />
+          <MiniCard card={player.thirdCard} small faceDown={player.balance <= 0} />
         </div>
       )}
       {player.result && (
