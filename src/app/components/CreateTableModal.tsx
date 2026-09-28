@@ -141,6 +141,9 @@ export function CreateTableModal({ onClose, onCreate }: CreateTableModalProps) {
               <strong className="text-[#F5DEB3]">Pozo obligatorio:</strong> cada jugador aporta {Number(buyIn) || 0} INT al centro de la mesa
             </p>
             <p className="mt-1 text-sm text-[#D2B48C]">
+              <strong className="text-[#F5DEB3]">Cuota de mesa:</strong> cada mano se descuenta el 10% de la entrada ({Math.max(1, Math.floor((Number(buyIn) || 0) * 0.1))} INT) al que alcance a pagarla; ese monto va al pozo
+            </p>
+            <p className="mt-1 text-sm text-[#D2B48C]">
               <strong className="text-[#F5DEB3]">Tu stack inicial:</strong> entraras a jugar con {Number(initialStack) || 0} INT como saldo personal
             </p>
             <p className="mt-1 text-sm text-[#D2B48C]">

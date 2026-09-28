@@ -475,6 +475,9 @@ const requireUserId = async (authorizationHeader: string | undefined) => {
   return data.user.id;
 };
 
+const TABLE_ANTE_PERCENT = 0.1;
+const tableAnte = (buyIn: number) => Math.max(1, Math.floor(Number(buyIn) * TABLE_ANTE_PERCENT));
+
 export const registerRealtimeRoomRoutes = (app: Hono) => {
   app.post("/server/realtime/rooms", async (c) => {
     try {
@@ -570,6 +573,19 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       }
 
       if (gameMode === "vs_ai") {
+        const ante = tableAnte(buyIn);
+        let collected = 0;
+        let ownerBalance = initialStack;
+        if (ownerBalance >= ante) {
+          ownerBalance -= ante;
+          collected += ante;
+        }
+        let aiBalance = aiInitialStack;
+        if (aiBalance >= ante) {
+          aiBalance -= ante;
+          collected += ante;
+        }
+
         const [firstCard, deckAfterFirst] = drawCard(room.deck || []);
         const [secondCard, deckAfterSecond] = drawCard(deckAfterFirst);
         const [aiCard1, deckAfterThird] = drawCard(deckAfterSecond);
@@ -582,6 +598,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
             third_card: null,
             bet: -1,
             result: "",
+            balance: ownerBalance,
           })
           .eq("room_id", room.id)
           .eq("user_id", userId);
@@ -590,10 +607,11 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
           .from("rooms")
           .update({
             deck: finalDeck,
+            pot: Number(room.pot) + collected,
             ai_state: {
               seat: 1,
               name: DEFAULT_AI_NAME,
-              balance: aiInitialStack,
+              balance: aiBalance,
               bet: -1,
               cards: [aiCard1, aiCard2],
               thirdCard: null,
@@ -677,11 +695,18 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
       const refreshed = await loadRoomRows(roomId);
       if (refreshed.players.length === refreshed.room.max_players) {
         let deck = refreshed.room.deck || shuffleDeck(createDeck());
+        const ante = tableAnte(Number(refreshed.room.buy_in));
+        let collected = 0;
         const playerUpdates = refreshed.players.map((player) => {
           const [card1, deck1] = drawCard(deck);
           const [card2, deck2] = drawCard(deck1);
           deck = deck2;
-          return { id: player.id, cards: [card1, card2] };
+          let balance = Number(player.balance);
+          if (balance >= ante) {
+            balance -= ante;
+            collected += ante;
+          }
+          return { id: player.id, cards: [card1, card2], balance };
         });
 
         const firstSeat = [...refreshed.players].sort((left, right) => left.seat - right.seat)[0]?.seat ?? 0;
@@ -694,6 +719,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
             current_turn_seat: firstSeat,
             turn_started_at: new Date().toISOString(),
             deck,
+            pot: Number(refreshed.room.pot) + collected,
           })
           .eq("id", roomId);
 
@@ -705,6 +731,7 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
               third_card: null,
               bet: -1,
               result: "",
+              balance: playerUpdate.balance,
             })
             .eq("id", playerUpdate.id);
         }
@@ -946,6 +973,18 @@ export const registerRealtimeRoomRoutes = (app: Hono) => {
         if (nextAiState && nextAiState.balance > 0) {
           nextAiState.balance -= Number(room.buy_in);
         }
+      }
+
+      const ante = tableAnte(Number(room.buy_in));
+      for (const player of playerUpdates) {
+        if (!player.has_declined_rebuy && player.balance >= ante) {
+          player.balance -= ante;
+          nextPot += ante;
+        }
+      }
+      if (nextAiState && nextAiState.balance >= ante) {
+        nextAiState.balance -= ante;
+        nextPot += ante;
       }
 
       const firstActiveSeat =

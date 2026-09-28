@@ -58,6 +58,7 @@ export function GameTable({
       <aside className="absolute left-2 top-2 z-20 max-w-[55%] rounded border border-white/20 bg-black/35 px-2 py-1 text-[10px] leading-[1.25] text-white sm:max-w-none sm:text-xs">
         <p>Codigo: <strong>{gameState.tableCode}</strong></p>
         <p>Aporte: <strong>{formatMoney(gameState.initialBuyIn)}</strong></p>
+        <p>Cuota/mano: <strong>{formatMoney(Math.max(1, Math.floor(gameState.initialBuyIn * 0.1)))}</strong></p>
         <p>Ronda: <strong>{gameState.round}</strong></p>
         <p>Jugadores: <strong>{gameState.players.length}/{gameState.maxPlayers}</strong></p>
         <p>Turno: <strong>{activePlayer?.name ?? "Esperando..."}</strong></p>
