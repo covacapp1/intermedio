@@ -3,11 +3,12 @@ import type { BannersConfig } from "../types/banners";
 
 interface SideBannersProps {
   banners: BannersConfig;
+  hideMobile?: boolean;
 }
 
 const CLOSED_KEY = "bannerMobileClosed";
 
-export function SideBanners({ banners }: SideBannersProps) {
+export function SideBanners({ banners, hideMobile }: SideBannersProps) {
   const [closed, setClosed] = useState(() => {
     try {
       return sessionStorage.getItem(CLOSED_KEY) === "1";
@@ -66,7 +67,7 @@ export function SideBanners({ banners }: SideBannersProps) {
         </a>
       )}
 
-      {banners.mobile?.img && banners.mobile.href && (
+      {!hideMobile && banners.mobile?.img && banners.mobile.href && (
         <div className="lg:hidden fixed bottom-4 left-4 z-40 flex items-center gap-2 bg-[#654321]/95 border-2 border-[#D4AF37] rounded-full pl-1.5 pr-2.5 py-1.5 shadow-[0_6px_16px_rgba(0,0,0,0.5)]">
           <a
             href={banners.mobile.href}

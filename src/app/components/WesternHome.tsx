@@ -49,7 +49,7 @@ export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogo
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#8B4513] via-[#A0522D] to-[#654321] p-4 relative overflow-hidden flex flex-col">
-      <SideBanners banners={banners} />
+      <SideBanners banners={banners} hideMobile />
       <div
         className="absolute inset-0 opacity-10"
         style={{
@@ -128,6 +128,21 @@ export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogo
             </button>
           )}
         </div>
+
+        {banners.mobile?.img && banners.mobile.href && (
+          <a
+            href={banners.mobile.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block mt-6 sm:mt-8 text-center lg:hidden"
+          >
+            <img
+              src={banners.mobile.img}
+              alt="Publicidad"
+              className="mx-auto max-w-full max-h-36 sm:max-h-44 object-contain rounded-lg border-2 border-[#654321] shadow-[0_8px_20px_rgba(0,0,0,0.5)]"
+            />
+          </a>
+        )}
 
         {showInstallHelp && (
           <div className="fixed inset-0 z-[100] bg-black/70 flex items-center justify-center p-4" onClick={() => setShowInstallHelp(false)}>
