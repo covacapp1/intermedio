@@ -134,11 +134,12 @@ function SlotEditor({
           <input
             type="url"
             value={item?.href || ""}
+            disabled={!item?.img}
             onChange={(e) =>
               onChange(item?.img ? { img: item.img, href: e.target.value } : null)
             }
-            placeholder="https://... (a dónde lleva el clic)"
-            className="w-full px-3 py-2 text-sm bg-[#D2B48C] border-2 border-[#654321] rounded text-[#3E2723] placeholder-[#8B7355] focus:outline-none focus:border-[#D4AF37]"
+            placeholder={item?.img ? "https://... (a dónde lleva el clic)" : "Primero elegí la imagen"}
+            className="w-full px-3 py-2 text-sm bg-[#D2B48C] border-2 border-[#654321] rounded text-[#3E2723] placeholder-[#8B7355] focus:outline-none focus:border-[#D4AF37] disabled:opacity-60"
           />
         </div>
       </div>

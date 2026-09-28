@@ -30,7 +30,7 @@ export function SideBanners({ banners }: SideBannersProps) {
   };
 
   const bannerClass =
-    "fixed top-1/2 -translate-y-1/2 z-40 w-40 lg:w-44 transition-transform hover:scale-[1.03] hidden xl:block";
+    "fixed top-1/2 -translate-y-1/2 z-40 w-36 xl:w-44 transition-transform hover:scale-[1.03] hidden lg:block";
 
   return (
     <>
@@ -67,7 +67,7 @@ export function SideBanners({ banners }: SideBannersProps) {
       )}
 
       {banners.mobile?.img && banners.mobile.href && (
-        <div className="xl:hidden fixed bottom-4 left-4 z-40 flex items-center gap-2 bg-[#654321]/95 border-2 border-[#D4AF37] rounded-full pl-1.5 pr-2.5 py-1.5 shadow-[0_6px_16px_rgba(0,0,0,0.5)]">
+        <div className="lg:hidden fixed bottom-4 left-4 z-40 flex items-center gap-2 bg-[#654321]/95 border-2 border-[#D4AF37] rounded-full pl-1.5 pr-2.5 py-1.5 shadow-[0_6px_16px_rgba(0,0,0,0.5)]">
           <a
             href={banners.mobile.href}
             target="_blank"
