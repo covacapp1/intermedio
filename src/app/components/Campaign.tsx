@@ -6,6 +6,7 @@ import { CampaignShop } from "./CampaignShop";
 import { CampaignRules } from "./CampaignRules";
 import { Confetti } from "./Confetti";
 import type { CampaignGameState, CampaignLocation, CampaignState } from "../types/campaign";
+import type { BannersConfig } from "../types/banners";
 import { formatMoney } from "../utils/deck";
 import {
   advanceRound,
@@ -38,6 +39,7 @@ interface CampaignProps {
   onClaimCompletionReward: () => Promise<"claimed" | "already" | "error">;
   completionRewardClaimed: boolean;
   shopCreditVersion: number;
+  banners: BannersConfig;
 }
 
 type Phase = "map" | "town" | "game";
@@ -55,6 +57,7 @@ export function Campaign({
   onClaimCompletionReward,
   completionRewardClaimed,
   shopCreditVersion,
+  banners,
 }: CampaignProps) {
   const [campaignState, setCampaignState] = useState<CampaignState>(() => {
     const saved = userId ? loadCampaignState(userId) : null;
@@ -349,6 +352,7 @@ export function Campaign({
         onClaimIncome={handleClaimIncome}
         onShowRules={() => setRulesOpen(true)}
         onOpenShop={() => setShopOpen(true)}
+        banners={banners}
       />
       {rulesOpen ? <CampaignRules onClose={() => setRulesOpen(false)} /> : null}
       {error ? <ErrorBanner message={error} /> : null}

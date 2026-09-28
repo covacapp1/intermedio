@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Camera } from "lucide-react";
+import { SideBanners } from "./SideBanners";
+import type { BannersConfig } from "../types/banners";
 
 interface ProfileData {
   username: string;
@@ -13,9 +15,10 @@ interface ProfileProps {
   profileData: ProfileData;
   onBack: () => void;
   onSave: (data: ProfileData) => void;
+  banners: BannersConfig;
 }
 
-export function Profile({ profileData, onBack, onSave }: ProfileProps) {
+export function Profile({ profileData, onBack, onSave, banners }: ProfileProps) {
   const [formData, setFormData] = useState(profileData);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -37,6 +40,7 @@ export function Profile({ profileData, onBack, onSave }: ProfileProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#8B4513] via-[#A0522D] to-[#654321] p-4">
+      <SideBanners banners={banners} />
       <div className="max-w-2xl mx-auto pt-4">
         {/* Header */}
         <button

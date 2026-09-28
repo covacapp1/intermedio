@@ -1,5 +1,7 @@
 import { ArrowLeft, Lock, CheckCircle, Coins, Wallet, ScrollText, ShoppingBag } from "lucide-react";
 import type { CampaignState, CampaignLocation } from "../types/campaign";
+import type { BannersConfig } from "../types/banners";
+import { SideBanners } from "./SideBanners";
 import { formatMoney } from "../utils/deck";
 import { getTownDef, townCompleted } from "../services/campaignEngine";
 
@@ -12,6 +14,7 @@ interface CampaignMapProps {
   onClaimIncome: () => void;
   onShowRules: () => void;
   onOpenShop: () => void;
+  banners: BannersConfig;
 }
 
 const DIFFICULTY_COLORS: Record<string, string> = {
@@ -37,6 +40,7 @@ export function CampaignMap({
   onClaimIncome,
   onShowRules,
   onOpenShop,
+  banners,
 }: CampaignMapProps) {
   const dailyIncome = campaignState.ownedProperties.reduce((sum, key) => {
     const sep = key.indexOf(":");
@@ -48,6 +52,7 @@ export function CampaignMap({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#8B4513] via-[#A0522D] to-[#654321] p-4">
+      <SideBanners banners={banners} />
       <div className="max-w-3xl mx-auto pt-6">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-6">
           <button

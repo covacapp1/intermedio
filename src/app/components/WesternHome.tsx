@@ -1,17 +1,20 @@
 import { useState, useEffect } from "react";
 import { Menu, X, Download, Share2, Smartphone } from "lucide-react";
 import { IntIcon } from "./IntIcon";
+import { SideBanners } from "./SideBanners";
+import type { BannersConfig } from "../types/banners";
 import { formatInt } from "../utils/economy";
 
 interface WesternHomeProps {
   userName: string;
   userBalance: number;
   isAdmin: boolean;
+  banners: BannersConfig;
   onNavigate: (view: "profile" | "tables" | "createTable" | "cashier" | "ads" | "admin" | "marketplace" | "terms" | "campaign") => void;
   onLogout: () => void;
 }
 
-export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogout }: WesternHomeProps) {
+export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogout, banners }: WesternHomeProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
@@ -46,6 +49,7 @@ export function WesternHome({ userName, userBalance, isAdmin, onNavigate, onLogo
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#8B4513] via-[#A0522D] to-[#654321] p-4 relative overflow-hidden flex flex-col">
+      <SideBanners banners={banners} />
       <div
         className="absolute inset-0 opacity-10"
         style={{

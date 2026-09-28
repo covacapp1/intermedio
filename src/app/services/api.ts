@@ -15,6 +15,7 @@ import {
   type WalletTransaction,
   type WithdrawalRequest,
 } from "../types/wallet";
+import type { BannersConfig } from "../types/banners";
 
 const supabaseUrl =
   (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.trim() ||
@@ -1000,6 +1001,29 @@ export const api = {
         wallet.updatedAt = Date.now();
         walletStorage.save(wallet);
         return { data: { success: true, userId, campaignBalance: newBalance } };
+      }
+    );
+  },
+
+  getBanners: async (): Promise<ApiResponse<BannersConfig>> => {
+    return withLocalFallback(
+      () => apiCallAuthenticated<BannersConfig>('/banners', 'GET'),
+      () => {
+        try {
+          return { data: JSON.parse(localStorage.getItem('banners_config') || '{}') as BannersConfig };
+        } catch {
+          return { data: {} };
+        }
+      }
+    );
+  },
+
+  setBanners: async (banners: BannersConfig): Promise<ApiResponse<BannersConfig>> => {
+    return withLocalFallback(
+      () => apiCallAuthenticated<BannersConfig>('/banners', 'POST', { banners }),
+      () => {
+        localStorage.setItem('banners_config', JSON.stringify(banners));
+        return { data: banners };
       }
     );
   },

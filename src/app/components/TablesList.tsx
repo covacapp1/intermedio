@@ -1,5 +1,7 @@
 import { Clock, DollarSign, Search, Users } from "lucide-react";
 import { useMemo, useState } from "react";
+import { SideBanners } from "./SideBanners";
+import type { BannersConfig } from "../types/banners";
 import { formatInt } from "../utils/economy";
 
 export interface TableInfo {
@@ -16,9 +18,10 @@ interface TablesListProps {
   tables: TableInfo[];
   onJoinTable: (tableId: string) => void;
   onBack: () => void;
+  banners: BannersConfig;
 }
 
-export function TablesList({ tables, onJoinTable, onBack }: TablesListProps) {
+export function TablesList({ tables, onJoinTable, onBack, banners }: TablesListProps) {
   const [searchCode, setSearchCode] = useState("");
 
   const availableTables = useMemo(() => {
@@ -34,6 +37,7 @@ export function TablesList({ tables, onJoinTable, onBack }: TablesListProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#8B4513] via-[#A0522D] to-[#654321] p-4">
+      <SideBanners banners={banners} />
       <div className="mx-auto max-w-5xl pt-4">
         <button
           onClick={onBack}

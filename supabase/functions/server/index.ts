@@ -1545,4 +1545,62 @@ app.post("/server/wallet/campaign-state", async (c) => {
   }
 });
 
+app.post("/server/banners", async (c) => {
+  try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
+    const forbiddenResponse = ensureAdmin(c, auth.user);
+    if (forbiddenResponse) {
+      return forbiddenResponse;
+    }
+
+    const body = await c.req.json();
+    const input = body.banners;
+    if (!input || typeof input !== "object") {
+      return c.json({ error: "Invalid banners payload" }, 400);
+    }
+
+    const sanitizeBanner = (value: unknown): { img: string; href: string } | null => {
+      if (!value || typeof value !== "object") return null;
+      const img = (value as Record<string, unknown>).img;
+      const href = (value as Record<string, unknown>).href;
+      if (typeof img !== "string" || typeof href !== "string") return null;
+      if (img.length === 0 || img.length > 600000) return null;
+      if (!img.startsWith("data:image/") && !img.startsWith("http")) return null;
+      if (!href.startsWith("http") || href.length > 3000) return null;
+      return { img, href };
+    };
+
+    const config = {
+      left: sanitizeBanner(input.left),
+      right: sanitizeBanner(input.right),
+      mobile: sanitizeBanner(input.mobile),
+    };
+
+    await kv.set("banners", config);
+    return c.json(config);
+  } catch (error) {
+    console.log("Error saving banners:", error);
+    return c.json({ error: "Failed to save banners" }, 500);
+  }
+});
+
+app.get("/server/banners", async (c) => {
+  try {
+    const auth = await getAuthenticatedUser(c);
+    if ("error" in auth) {
+      return auth.error;
+    }
+
+    const banners = await kv.get("banners");
+    return c.json(banners ?? { left: null, right: null, mobile: null });
+  } catch (error) {
+    console.log("Error fetching banners:", error);
+    return c.json({ left: null, right: null, mobile: null });
+  }
+});
+
 Deno.serve(app.fetch);

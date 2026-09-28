@@ -15,12 +15,14 @@ import { PotModal } from "./components/PotModal";
 import { RebuyModal } from "./components/RebuyModal";
 import { AdminWithdrawals } from "./components/AdminWithdrawals";
 import { AdminIntManager } from "./components/AdminIntManager";
+import { BannerManager } from "./components/BannerManager";
 import { Marketplace } from "./components/Marketplace";
 import { Terms } from "./components/Terms";
 import { Campaign, CAMPAIGN_SHOP_DONE_KEY } from "./components/Campaign";
 import { createCampaignState, loadCampaignState, saveCampaignState } from "./services/campaignEngine";
 import { type GameState } from "./types/game";
 import type { CampaignState } from "./types/campaign";
+import type { BannersConfig } from "./types/banners";
 import { formatMoney } from "./utils/deck";
 import { api } from "./services/api";
 import { realtimeGame, type GameTable as RealtimeGameTable, type TableInfo } from "./services/realtimeGame";
@@ -34,7 +36,7 @@ import {
   type WithdrawalMethod,
 } from "./types/wallet";
 
-type AppView = "login" | "home" | "profile" | "tables" | "cashier" | "ads" | "game" | "admin" | "admin-int" | "marketplace" | "terms" | "campaign";
+type AppView = "login" | "home" | "profile" | "tables" | "cashier" | "ads" | "game" | "admin" | "admin-int" | "admin-banners" | "marketplace" | "terms" | "campaign";
 
 interface UserData {
   id: string;
@@ -102,6 +104,7 @@ function App() {
   const [cashierNotice, setCashierNotice] = useState("");
   const [adminWithdrawals, setAdminWithdrawals] = useState<AdminWithdrawalItem[]>([]);
   const [adminUsers, setAdminUsers] = useState<Array<{ userId: string; email: string; balance: number; campaignBalance?: number }>>([]);
+  const [banners, setBanners] = useState<BannersConfig>({});
   const [authLoading, setAuthLoading] = useState(true);
   const [authSubmitting, setAuthSubmitting] = useState(false);
   const [authError, setAuthError] = useState("");
@@ -855,7 +858,27 @@ function App() {
     setAuthError("");
   };
 
-  const handleNavigate = (view: "profile" | "tables" | "createTable" | "cashier" | "ads" | "admin" | "admin-int" | "marketplace" | "terms" | "campaign") => {
+  useEffect(() => {
+    if (!userData.id) return;
+    let cancelled = false;
+    void api.getBanners().then((res) => {
+      if (!cancelled && res.data) {
+        setBanners(res.data);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userData.id]);
+
+  const handleSaveBanners = async (config: BannersConfig) => {
+    const res = await api.setBanners(config);
+    if (res.data) {
+      setBanners(res.data);
+    }
+  };
+
+  const handleNavigate = (view: "profile" | "tables" | "createTable" | "cashier" | "ads" | "admin" | "admin-int" | "admin-banners" | "marketplace" | "terms" | "campaign") => {
     if (view === "tables") {
       setCurrentView("tables");
     } else if (view === "createTable") {
@@ -868,6 +891,10 @@ function App() {
     } else if (view === "admin-int") {
       if (isAdmin) {
         setCurrentView("admin-int");
+      }
+    } else if (view === "admin-banners") {
+      if (isAdmin) {
+        setCurrentView("admin-banners");
       }
     } else {
       setCurrentView(view);
@@ -1363,6 +1390,7 @@ function App() {
         isAdmin={isAdmin}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
+        banners={banners}
       />
     );
   }
@@ -1400,6 +1428,7 @@ function App() {
         onRefresh={refreshAdminWithdrawals}
         onResolve={handleResolveWithdrawal}
         onNavigateToIntManager={() => handleNavigate("admin-int")}
+        onNavigateToBanners={() => handleNavigate("admin-banners")}
       />
     );
   }
@@ -1416,12 +1445,23 @@ function App() {
     );
   }
 
+  if (currentView === "admin-banners" && isAdmin) {
+    return (
+      <BannerManager
+        banners={banners}
+        onBack={handleBackToHome}
+        onSave={handleSaveBanners}
+      />
+    );
+  }
+
   if (currentView === "profile") {
     return (
       <Profile
         profileData={userData.profile}
         onBack={handleBackToHome}
         onSave={handleSaveProfile}
+        banners={banners}
       />
     );
   }
@@ -1460,6 +1500,7 @@ function App() {
         completionRewardClaimed={walletSummary.campaignCompletionRewarded ?? false}
         shopCreditVersion={shopCreditVersion}
         onBuyCampaignPack={handleCampaignDeposit}
+        banners={banners}
       />
     );
   }
@@ -1473,6 +1514,7 @@ function App() {
           tables={tables}
           onJoinTable={handleJoinTable}
           onBack={handleBackToHome}
+          banners={banners}
         />
         {showCreateModal && (
           <CreateTableModal
